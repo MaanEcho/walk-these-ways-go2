@@ -12,11 +12,14 @@ import pathlib
 
 # lcm多播通信的标准格式
 lc = lcm.LCM("udpm://239.255.76.67:7667?ttl=255")
+# 初始化LCM通信对象，用于在本地网络中进行消息广播，使用UDP多播协议。
 
 def load_and_run_policy(label, experiment_name, max_vel=1.0, max_yaw_vel=1.0):
     # load agent
+    # 根据label加载对应的日志目录
     dirs = glob.glob(f"../../runs/{label}/*")
     logdir = sorted(dirs)[0]
+    # 获取最早创建的目录
 
 # with open(logdir+"/parameters.pkl", 'rb') as file:
     with open(logdir+"/parameters.pkl", 'rb') as file:
@@ -86,3 +89,4 @@ if __name__ == '__main__':
     # default:
     # max_vel=3.5, max_yaw_vel=5.0
     load_and_run_policy(label, experiment_name=experiment_name, max_vel=2.5, max_yaw_vel=5.0)
+    # 加载并运行神经网络模型，设置最大线速度和最大偏航角速度
