@@ -1,16 +1,16 @@
 struct state_estimator_lcmt
 {
-    float p[3];
-    float vWorld[3];
-    float vBody[3];
-    float rpy[3];
-    float omegaBody[3];
-    float omegaWorld[3];
-    float quat[4];
-    float contact_estimate[4];
-    float aBody[3];
-    float aWorld[3];
-    int64_t timestamp_us;
-    int64_t id;
-    int64_t robot_id;
+    float p[3];    // 世界坐标系下的位置？
+    float vWorld[3];    // 世界坐标系下x、y、z方向的线速度
+    float vBody[3]; // 机身坐标系下x、y、z方向的线速度
+    float rpy[3];   // 欧拉角
+    float omegaBody[3]; // 机身坐标系下x、y、z方向的角速度
+    float omegaWorld[3];    // 世界坐标系下x、y、z方向的角速度
+    float quat[4];    // 四元数
+    float contact_estimate[4];  // 足端接触状态
+    float aBody[3];   // 机身坐标系下x、y、z方向的加速度
+    float aWorld[3];    // 世界坐标系下x、y、z方向的加速度
+    int64_t timestamp_us;    // 时间戳，单位：微秒
+    int64_t id; // ID（不知道是什么的ID）
+    int64_t robot_id;    // 机器人ID
 }

@@ -5,7 +5,11 @@ import numpy as np
 import torch
 
 
-def class_to_dict(obj) -> dict:
+def class_to_dict(obj) -> dict:  # 阅读完成
+    """
+    功能：将一个Python类实例（obj）转换为一个字典（dict）。具体来说，它递归地将类的属性及其嵌套对象转换为字典形式，并忽略以下两个内容：
+    ①私有属性：以 _ 开头的属性会被忽略；②特定属性：名为 terrain 的属性会被忽略。
+    """
     if not hasattr(obj, "__dict__"):
         return obj
     result = {}
@@ -25,17 +29,18 @@ def class_to_dict(obj) -> dict:
 
 
 class MultiLogger:
-    def __init__(self):
+    def __init__(self): # 阅读完成
         self.loggers = {}
 
-    def add_robot(self, name, cfg):
+    def add_robot(self, name, cfg): # 阅读完成
         print(name, cfg)
         self.loggers[name] = EpisodeLogger(cfg)
 
     def log(self, name, info):
         self.loggers[name].log(info)
 
-    def save(self, filename):
+    def save(self, filename):   # 阅读完成
+        """将日志信息保存到指定的文件中"""
         with open(filename, 'wb') as file:
             logdict = {}
             for key in self.loggers.keys():
@@ -59,11 +64,11 @@ class MultiLogger:
 
 
 class EpisodeLogger:
-    def __init__(self, cfg):
+    def __init__(self, cfg):    # 阅读完成
         self.infos = []
         self.cfg = cfg
 
-    def log(self, info):
+    def log(self, info):     # 阅读完成
         for key in info.keys():
             if isinstance(info[key], torch.Tensor):
                 info[key] = info[key].detach().cpu().numpy()
@@ -75,5 +80,5 @@ class EpisodeLogger:
 
         self.infos += [dict(info)]
 
-    def reset(self):
+    def reset(self):       # 阅读完成
         self.infos = []

@@ -19,7 +19,6 @@ class CommandProfile:
     def reset(self, reset_time):
         self.start_time = reset_time
 
-
 class ConstantAccelerationProfile(CommandProfile):
     def __init__(self, dt, max_speed, accel_time, zero_buf_time=0):
         super().__init__(dt)
@@ -29,7 +28,6 @@ class ConstantAccelerationProfile(CommandProfile):
         self.commands[zero_buf_timesteps:zero_buf_timesteps + accel_timesteps, 0] = torch.arange(0, max_speed,
                                                                                                  step=max_speed / accel_timesteps)
         self.commands[zero_buf_timesteps + accel_timesteps:, 0] = max_speed
-
 
 class ElegantForwardProfile(CommandProfile):
     def __init__(self, dt, max_speed, accel_time, duration, deaccel_time, zero_buf_time=0):
@@ -48,7 +46,6 @@ class ElegantForwardProfile(CommandProfile):
                      [max_speed] * duration_timesteps + [*np.linspace(max_speed, 0, deaccel_timesteps)]
 
         self.commands[:len(x_vel_cmds), 0] = torch.Tensor(x_vel_cmds)
-
 
 class ElegantYawProfile(CommandProfile):
     def __init__(self, dt, max_speed, zero_buf_time, accel_time, duration, deaccel_time, yaw_rate):
@@ -71,7 +68,6 @@ class ElegantYawProfile(CommandProfile):
 
         self.commands[:len(x_vel_cmds), 0] = torch.Tensor(x_vel_cmds)
         self.commands[:len(yaw_vel_cmds), 2] = torch.Tensor(yaw_vel_cmds)
-
 
 class ElegantGaitProfile(CommandProfile):
     def __init__(self, dt, filename):
@@ -96,20 +92,23 @@ class ElegantGaitProfile(CommandProfile):
         self.commands[:len_command_sequence, 8] = torch.Tensor(command_sequence["duration_cmd"])
 
 class RCControllerProfile(CommandProfile):
-    def __init__(self, dt, state_estimator, x_scale=1.0, y_scale=1.0, yaw_scale=1.0, probe_vel_multiplier=1.0):
+    def __init__(self, dt, state_estimator, x_scale=1.0, y_scale=1.0, yaw_scale=1.0, probe_vel_multiplier=1.0): # 阅读完成
         super().__init__(dt)
         self.state_estimator = state_estimator
         self.x_scale = x_scale
         self.y_scale = y_scale
         self.yaw_scale = yaw_scale
-
         self.probe_vel_multiplier = probe_vel_multiplier
+        # 不知道probe_vel_multiplier是什么含义
 
         self.triggered_commands = {i: None for i in range(4)}  # command profiles for each action button on the controller
+        # 遥控器上四个按键X、Y、B、A（顺序不一定对）的命令配置文件
         self.currently_triggered = [0, 0, 0, 0]
+        # 当前触发的按键
         self.button_states = [0, 0, 0, 0]
+        # 按键状态
 
-    def get_command(self, t, probe=False):
+    def get_command(self, t, probe=False):  # 未阅读完毕
 
         command = self.state_estimator.get_command()
         command[0] = command[0] * self.x_scale
@@ -123,30 +122,39 @@ class RCControllerProfile(CommandProfile):
             command[2] = command[2] * self.probe_vel_multiplier
 
         # check for action buttons
+        # 检查动作按键？
         prev_button_states = self.button_states[:]
+        # 保存上一次的按键状态
         self.button_states = self.state_estimator.get_buttons()
+        # 更新按键状态
         for button in range(4):
+        # 遍历A、B、X、Y四个按键（代码中的顺序不一定是这样）
             if self.triggered_commands[button] is not None:
+            # 如果当前按键有命令配置文件
                 if self.button_states[button] == 1 and prev_button_states[button] == 0:
+                # 如果当前按键按下，且之前没有按下
                     if not self.currently_triggered[button]:
+                    # 如果不是当前正在触发的按键
                         # reset the triggered action
+                        # 重置选择的步态
                         self.triggered_commands[button].reset(t)
                         # reset the internal timing variable
+                        # 重置内部计时变量
                         reset_timer = True
                         self.currently_triggered[button] = True
                     else:
                         self.currently_triggered[button] = False
                 # execute the triggered action
+                # 执行选择的步态
                 if self.currently_triggered[button] and t < self.triggered_commands[button].max_timestep:
                     command = self.triggered_commands[button].get_command(t)
-
 
         return command, reset_timer
 
     def add_triggered_command(self, button_idx, command_profile):
         self.triggered_commands[button_idx] = command_profile
 
-    def get_buttons(self):
+    def get_buttons(self):  # 阅读完成
         return self.state_estimator.get_buttons()
 
 class RCControllerProfileAccel(RCControllerProfile):
@@ -180,10 +188,6 @@ class RCControllerProfileAccel(RCControllerProfile):
 
     def get_buttons(self):
         return self.state_estimator.get_buttons()
-
-
-
-
 
 class KeyboardProfile(CommandProfile):
     # for control via keyboard inputs to isaac gym visualizer
@@ -223,7 +227,6 @@ class KeyboardProfile(CommandProfile):
         print(self.command)
 
         return self.command
-
 
 if __name__ == "__main__":
     cmdprof = ConstantAccelerationProfile(dt=0.2, max_speed=4, accel_time=3)

@@ -10,7 +10,11 @@ from go2_gym_deploy.lcm_types.pd_tau_targets_lcmt import pd_tau_targets_lcmt
 lc = lcm.LCM("udpm://239.255.76.67:7667?ttl=255")
 
 
-def class_to_dict(obj) -> dict:
+def class_to_dict(obj) -> dict:  # 阅读完成
+    """
+    功能：将一个Python类实例（obj）转换为一个字典（dict）。具体来说，它递归地将类的属性及其嵌套对象转换为字典形式，并忽略以下两个内容：
+    ①私有属性：以 _ 开头的属性会被忽略；②特定属性：名为 terrain 的属性会被忽略。
+    """
     if not hasattr(obj, "__dict__"):
         return obj
     result = {}
@@ -29,22 +33,31 @@ def class_to_dict(obj) -> dict:
 
 
 class LCMAgent():
-    def __init__(self, cfg, se, command_profile):
+    def __init__(self, cfg, se, command_profile):   # 阅读完成
         if not isinstance(cfg, dict):
+        # 判断变量cfg是否是一个字典（dict）。如果不是字典，则调用class_to_dict()函数将cfg转换为一个字典。
             cfg = class_to_dict(cfg)
         self.cfg = cfg
         self.se = se
         self.command_profile = command_profile
 
         self.dt = self.cfg["control"]["decimation"] * self.cfg["sim"]["dt"]
+        # dt还是控制步长的含义吗？
         self.timestep = 0
+        # timestep是指当前的步数吗？
 
         self.num_obs = self.cfg["env"]["num_observations"]
+        # 观测observations的数量
         self.num_envs = 1
+        # 环境的数量
         self.num_privileged_obs = self.cfg["env"]["num_privileged_obs"]
+        # 特权观测privileged_observations的数量
         self.num_actions = self.cfg["env"]["num_actions"]
+        # 动作actions的数量
         self.num_commands = self.cfg["commands"]["num_commands"]
+        # 命令commands的数量
         self.device = 'cpu'
+        # 设备device的类型
 
         if "obs_scales" in self.cfg.keys():
             self.obs_scales = self.cfg["obs_scales"]
@@ -62,10 +75,10 @@ class LCMAgent():
 
 
         joint_names = [
-            "FL_hip_joint", "FL_thigh_joint", "FL_calf_joint",
-            "FR_hip_joint", "FR_thigh_joint", "FR_calf_joint",
-            "RL_hip_joint", "RL_thigh_joint", "RL_calf_joint",
-            "RR_hip_joint", "RR_thigh_joint", "RR_calf_joint", ]
+            "FL_hip_joint", "FL_thigh_joint", "FL_calf_joint",  # 左前机身、大腿、小腿关节
+            "FR_hip_joint", "FR_thigh_joint", "FR_calf_joint",  # 右前机身、大腿、小腿关节
+            "RL_hip_joint", "RL_thigh_joint", "RL_calf_joint",  # 左后机身、大腿、小腿关节 
+            "RR_hip_joint", "RR_thigh_joint", "RR_calf_joint", ]    # 右后机身、大腿、小腿关节
         self.default_dof_pos = np.array([self.cfg["init_state"]["default_joint_angles"][name] for name in joint_names])
         try:
             self.default_dof_pos_scale = np.array([self.cfg["init_state"]["default_hip_scales"], self.cfg["init_state"]["default_thigh_scales"], self.cfg["init_state"]["default_calf_scales"],
@@ -77,7 +90,9 @@ class LCMAgent():
         self.default_dof_pos = self.default_dof_pos * self.default_dof_pos_scale
 
         self.p_gains = np.zeros(12)
+        # 12个关节电机的kp？
         self.d_gains = np.zeros(12)
+        # 12个关节电机的kd？
         for i in range(12):
             joint_name = joint_names[i]
             found = False
@@ -96,45 +111,61 @@ class LCMAgent():
 
         self.commands = np.zeros((1, self.num_commands))
         self.actions = torch.zeros(12)
+        # 动作
         self.last_actions = torch.zeros(12)
+        # 上一次的动作
         self.gravity_vector = np.zeros(3)
+        # 重力向量
         self.dof_pos = np.zeros(12)
+        # 关节位置
         self.dof_vel = np.zeros(12)
+        # 关节速度
         self.body_linear_vel = np.zeros(3)
+        # 机器人线速度
         self.body_angular_vel = np.zeros(3)
+        # 机器人角速度
         self.joint_pos_target = np.zeros(12)
+        # 目标关节位置
         self.joint_vel_target = np.zeros(12)
+        # 目标关节速度
         self.torques = np.zeros(12)
+        # 扭矩
         self.contact_state = np.ones(4)
+        # 足端接触状态
 
         self.joint_idxs = self.se.joint_idxs
+        # 关节电机索引
 
         self.gait_indices = torch.zeros(self.num_envs, dtype=torch.float)
+        # 步态索引
         self.clock_inputs = torch.zeros(self.num_envs, 4, dtype=torch.float)
+        # 时钟输入？（目前不知道什么意思）
 
-        if "obs_scales" in self.cfg.keys():
-            self.obs_scales = self.cfg["obs_scales"]
-        else:
-            self.obs_scales = self.cfg["normalization"]["obs_scales"]
+        # if "obs_scales" in self.cfg.keys():
+        #     self.obs_scales = self.cfg["obs_scales"]
+        # else:
+        #     self.obs_scales = self.cfg["normalization"]["obs_scales"]
+        # 这段代码跟上面的重复了。
 
         self.is_currently_probing = False
+        # 是否正在探测？（目前不知道什么意思）
 
-    def set_probing(self, is_currently_probing):
+    def set_probing(self, is_currently_probing):    # 阅读完成，但还是不知道probe在这里的含义是什么
         self.is_currently_probing = is_currently_probing
 
-    def get_obs(self):
+    def get_obs(self):  # 阅读完成
 
-        self.gravity_vector = self.se.get_gravity_vector()
-        cmds, reset_timer = self.command_profile.get_command(self.timestep * self.dt, probe=self.is_currently_probing)
-        self.commands[:, :] = cmds[:self.num_commands]
-        if reset_timer:
+        self.gravity_vector = self.se.get_gravity_vector()  # √
+        cmds, reset_timer = self.command_profile.get_command(self.timestep * self.dt, probe=self.is_currently_probing)  # √
+        self.commands[:, :] = cmds[:self.num_commands]  # √
+        if reset_timer:  # √
             self.reset_gait_indices()
         #else:
         #    self.commands[:, 0:3] = self.command_profile.get_command(self.timestep * self.dt)[0:3]
-        self.dof_pos = self.se.get_dof_pos()
-        self.dof_vel = self.se.get_dof_vel()
-        self.body_linear_vel = self.se.get_body_linear_vel()
-        self.body_angular_vel = self.se.get_body_angular_vel()
+        self.dof_pos = self.se.get_dof_pos()    # √
+        self.dof_vel = self.se.get_dof_vel()    # √
+        self.body_linear_vel = self.se.get_body_linear_vel()    # √
+        self.body_angular_vel = self.se.get_body_angular_vel()  # √
 
         ob = np.concatenate((self.gravity_vector.reshape(1, -1),
                              self.commands * self.commands_scale,
@@ -142,37 +173,37 @@ class LCMAgent():
                              self.dof_vel.reshape(1, -1) * self.obs_scales["dof_vel"],
                              torch.clip(self.actions, -self.cfg["normalization"]["clip_actions"],
                                         self.cfg["normalization"]["clip_actions"]).cpu().detach().numpy().reshape(1, -1)
-                             ), axis=1)
+                             ), axis=1)  # √
 
-        if self.cfg["env"]["observe_two_prev_actions"]:
+        if self.cfg["env"]["observe_two_prev_actions"]:  # √
             ob = np.concatenate((ob,
                             self.last_actions.cpu().detach().numpy().reshape(1, -1)), axis=1)
 
-        if self.cfg["env"]["observe_clock_inputs"]:
+        if self.cfg["env"]["observe_clock_inputs"]:  # √
             ob = np.concatenate((ob,
                             self.clock_inputs), axis=1)
             # print(self.clock_inputs)
 
-        if self.cfg["env"]["observe_vel"]:
+        if self.cfg["env"]["observe_vel"]:  # √
             ob = np.concatenate(
                 (self.body_linear_vel.reshape(1, -1) * self.obs_scales["lin_vel"],
                  self.body_angular_vel.reshape(1, -1) * self.obs_scales["ang_vel"],
                  ob), axis=1)
 
-        if self.cfg["env"]["observe_only_lin_vel"]:
+        if self.cfg["env"]["observe_only_lin_vel"]:  # √
             ob = np.concatenate(
                 (self.body_linear_vel.reshape(1, -1) * self.obs_scales["lin_vel"],
                  ob), axis=1)
 
-        if self.cfg["env"]["observe_yaw"]:
+        if self.cfg["env"]["observe_yaw"]:  # √
             heading = self.se.get_yaw()
             ob = np.concatenate((ob, heading.reshape(1, -1)), axis=-1)
 
-        self.contact_state = self.se.get_contact_state()
-        if "observe_contact_states" in self.cfg["env"].keys() and self.cfg["env"]["observe_contact_states"]:
+        self.contact_state = self.se.get_contact_state()    # √
+        if "observe_contact_states" in self.cfg["env"].keys() and self.cfg["env"]["observe_contact_states"]:    # √
             ob = np.concatenate((ob, self.contact_state.reshape(1, -1)), axis=-1)
 
-        if "terrain" in self.cfg.keys() and self.cfg["terrain"]["measure_heights"]:
+        if "terrain" in self.cfg.keys() and self.cfg["terrain"]["measure_heights"]:  # √
             robot_height = 0.25
             self.measured_heights = np.zeros(
                 (len(self.cfg["terrain"]["measured_points_x"]), len(self.cfg["terrain"]["measured_points_y"]))).reshape(
@@ -180,10 +211,10 @@ class LCMAgent():
             heights = np.clip(robot_height - 0.5 - self.measured_heights, -1, 1.) * self.obs_scales["height_measurements"]
             ob = np.concatenate((ob, heights), axis=1)
 
+        return torch.tensor(ob, device=self.device).float()  # √
 
-        return torch.tensor(ob, device=self.device).float()
-
-    def get_privileged_observations(self):
+    def get_privileged_observations(self):  # 阅读完成
+        """部署时无需特权观测"""
         return None
 
     def publish_action(self, action, hard_reset=False):
@@ -216,13 +247,16 @@ class LCMAgent():
         # 由lcm将神经网络输出的action传入c++ sdk
         lc.publish("pd_plustau_targets", command_for_robot.encode())
 
-    def reset(self):
+    def reset(self):    # 阅读完成
         self.actions = torch.zeros(12)
+        # 初始化动作actions为0
         self.time = time.time()
+        # 时间戳self.time
         self.timestep = 0
+        # 初始化时间步timestep为0
         return self.get_obs()
 
-    def reset_gait_indices(self):
+    def reset_gait_indices(self):   # 阅读完成
         self.gait_indices = torch.zeros(self.num_envs, dtype=torch.float)
 
     def step(self, actions, hard_reset=False):

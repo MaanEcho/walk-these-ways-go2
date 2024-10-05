@@ -5,10 +5,11 @@ import torch
 
 
 class HistoryWrapper:
-    def __init__(self, env):
+    def __init__(self, env):    # 阅读完成
         self.env = env
 
         if isinstance(self.env.cfg, dict):
+        # 判断变量self.env.cfg是否是一个字典（dict）。
             self.obs_history_length = self.env.cfg["env"]["num_observation_history"]
         else:
             self.obs_history_length = self.env.cfg.env.num_observation_history
@@ -24,24 +25,24 @@ class HistoryWrapper:
         self.obs_history = torch.cat((self.obs_history[:, self.env.num_obs:], obs), dim=-1)
         return {'obs': obs, 'privileged_obs': privileged_obs, 'obs_history': self.obs_history}, rew, done, info
 
-    def get_observations(self):
+    def get_observations(self):  # 阅读完成（在lcm_agent.py中没有找到对应的get_observations()函数，估计是有问题的）
         obs = self.env.get_observations()
         privileged_obs = self.env.get_privileged_observations()
         self.obs_history = torch.cat((self.obs_history[:, self.env.num_obs:], obs), dim=-1)
         return {'obs': obs, 'privileged_obs': privileged_obs, 'obs_history': self.obs_history}
 
-    def get_obs(self):
-        obs = self.env.get_obs()
-        privileged_obs = self.env.get_privileged_observations()
-        self.obs_history = torch.cat((self.obs_history[:, self.env.num_obs:], obs), dim=-1)
-        return {'obs': obs, 'privileged_obs': privileged_obs, 'obs_history': self.obs_history}
+    def get_obs(self):    # 阅读完成
+        obs = self.env.get_obs()    # √
+        privileged_obs = self.env.get_privileged_observations()  # √
+        self.obs_history = torch.cat((self.obs_history[:, self.env.num_obs:], obs), dim=-1)  # √
+        return {'obs': obs, 'privileged_obs': privileged_obs, 'obs_history': self.obs_history}  # √
 
     def reset_idx(self, env_ids):  # it might be a problem that this isn't getting called!!
         ret = self.env.reset_idx(env_ids)
         self.obs_history[env_ids, :] = 0
         return ret
 
-    def reset(self):
+    def reset(self):    # 阅读完成
         ret = self.env.reset()
         privileged_obs = self.env.get_privileged_observations()
         self.obs_history[:, :] = 0

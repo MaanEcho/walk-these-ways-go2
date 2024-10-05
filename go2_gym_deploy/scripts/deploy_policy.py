@@ -16,23 +16,29 @@ lc = lcm.LCM("udpm://239.255.76.67:7667?ttl=255")
 
 def load_and_run_policy(label, experiment_name, max_vel=1.0, max_yaw_vel=1.0):
     # load agent
-    # 根据label加载对应的日志目录
     dirs = glob.glob(f"../../runs/{label}/*")
+    # 根据label加载对应的目录，dirs将包含所有匹配的子目录和文件。
     logdir = sorted(dirs)[0]
-    # 获取最早创建的目录
+    # logdir将是dirs中按字母顺序排在最前面的子目录。
 
-# with open(logdir+"/parameters.pkl", 'rb') as file:
     with open(logdir+"/parameters.pkl", 'rb') as file:
         pkl_cfg = pkl.load(file)
+        # 加载参数文件
         print(pkl_cfg.keys())
+        # 打印pkl_cfg的键值
         cfg = pkl_cfg["Cfg"]
+        # 取出Cfg键值，即配置文件内容。
         print(cfg.keys())
+        # 打印cfg的键值
 
     print('Config successfully loaded!')
+    # 成功加载配置文件信息。
 
+    #----------------------
     se = StateEstimator(lc)
+    #----------------------
 
-    control_dt = 0.02
+    control_dt = 0.02   # 控制步长
     command_profile = RCControllerProfile(dt=control_dt, state_estimator=se, x_scale=max_vel, y_scale=0.6, yaw_scale=max_yaw_vel)
 
     hardware_agent = LCMAgent(cfg, se, command_profile)
@@ -47,7 +53,9 @@ def load_and_run_policy(label, experiment_name, max_vel=1.0, max_yaw_vel=1.0):
 
     # load runner
     root = f"{pathlib.Path(__file__).parent.resolve()}/../../logs/"
+    # 计算出logs日志目录的绝对路径，并存储在root变量中。
     pathlib.Path(root).mkdir(parents=True, exist_ok=True)
+    # 创建logs日志目录，如果不存在则创建。
     deployment_runner = DeploymentRunner(experiment_name=experiment_name, se=None,
                                          log_root=f"{root}/{experiment_name}")
     deployment_runner.add_control_agent(hardware_agent, "hardware_closed_loop")
@@ -55,6 +63,7 @@ def load_and_run_policy(label, experiment_name, max_vel=1.0, max_yaw_vel=1.0):
     deployment_runner.add_command_profile(command_profile)
 
     if len(sys.argv) >= 2:
+    # 如果命令行参数大于等于2，则设置最大步数为命令行参数值。
         max_steps = int(sys.argv[1])
     else:
         max_steps = 10000000
@@ -73,7 +82,9 @@ def load_policy(logdir):
     def policy(obs, info):
         i = 0
         latent = adaptation_module.forward(obs["obs_history"].to('cpu'))
+        # 使用adaptation_module对obs["obs_history"]进行前向传播，得到潜在变量latent。
         action = body.forward(torch.cat((obs["obs_history"].to('cpu'), latent), dim=-1))
+        # 将obs["obs_history"]和latent拼接在一起，并传递给body模型进行前向传播，得到动作 action。
         info['latent'] = latent
         return action
 

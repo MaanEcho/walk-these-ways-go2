@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/go2_states.dir/go2_states.cpp.o -o go2_states  -lunitree_sdk2 -lddsc -lddscxx -lrt -lpthread -lunitree_sdk2 -lddsc -lddscxx -lrt -lpthread

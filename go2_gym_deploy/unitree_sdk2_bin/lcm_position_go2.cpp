@@ -94,21 +94,21 @@ public:
     explicit Custom() {} // √
     ~Custom() {}         // √
 
-    void Init();                                                        // √
-    void InitLowCmd();                                                  // √
-    void Loop();                                                        // √
-    void LowStateMessageHandler(const void *messages);                  // √
-    void JoystickHandler(const void *message);                          // √
-    void InitRobotStateClient();                                        // √
-    void activateService(const std::string &serviceName, int activate); // √
+    void Init();                                                         // √
+    void InitLowCmd();                                                   // √
+    void Loop();                                                         // √
+    void LowStateMessageHandler(const void *messages);                   // √
+    void JoystickHandler(const void *message);                           // √
+    void InitRobotStateClient();                                         // √
+    void SwitchService(const std::string &serviceName, uint32_t status); // √
 
     void lcm_send();                                                                                                   // √
     void lcm_receive();                                                                                                // √
     void lcm_receive_Handler(const lcm::ReceiveBuffer *rbuf, const std::string &chan, const pd_tau_targets_lcmt *msg); // √
     void LowCmdWrite();                                                                                                // √
 
-    void SetNominalPose();                                  // √
-    int queryServiceStatus(const std::string &serviceName); // √
+    void SetNominalPose();                                       // √
+    uint32_t QueryServiceStatus(const std::string &serviceName); // √
 
     //------------------------------------------------
     leg_control_data_lcmt leg_control_lcm_data = {0};
@@ -131,7 +131,7 @@ public:
     int mode = 0;        // 某种模式，可能指的是运动模式
     int motiontime = 0;  // 底层控制指令的下发次数 √
     float dt = 0.002;    // unit [second] 控制步长 √
-    bool _firstRun;      // √
+    bool firstRun;       // √
 
     /*LowCmd write thread*/
     // DDS相关的底层命令发送线程指针
@@ -140,33 +140,35 @@ public:
     unitree::common::ThreadPtr lowCmdWriteThreadPtr; // √
 };
 
-// 初始化 RobotStateClient 类的实例
+// 初始化 RobotStateClient 类的实例 √
 void Custom::InitRobotStateClient() // 阅读完成
 {
-    rsc.SetTimeout(5.0f);
-    rsc.Init();
+    rsc.SetTimeout(10.0f); // 设置超时时间
+    rsc.Init();            // 初始化rsc
 }
 
-// 获取主运控服务（sport_mode）的当前状态
-int Custom::queryServiceStatus(const std::string &serviceName) // 阅读完成
+// 获取主运控服务（sport_mode）的当前状态 √
+uint32_t Custom::QueryServiceStatus(const std::string &serviceName) // 阅读完成
 {
     std::vector<unitree::robot::go2::ServiceState> serviceStateList;
-    int ret, serviceStatus;
-    ret = rsc.ServiceList(serviceStateList);
-    size_t i, count = serviceStateList.size();
-    for (i = 0; i < count; i++)
+    uint32_t serviceStatus;
+
+    rsc.ServiceList(serviceStateList);
+
+    size_t count = serviceStateList.size();
+    for (uint32_t i = 0; i < count; i++)
     {
         const unitree::robot::go2::ServiceState &serviceState = serviceStateList[i];
         if (serviceState.name == serviceName)
         {
             if (serviceState.status == 0)
             {
-                std::cout << "name: " << serviceState.name << " is activate" << std::endl;
+                std::cout << "Service: " << serviceState.name << " is active." << std::endl;
                 serviceStatus = 1;
             }
             else
             {
-                std::cout << "name:" << serviceState.name << " is deactivate" << std::endl;
+                std::cout << "Service:" << serviceState.name << " is inactive." << std::endl;
                 serviceStatus = 0;
             }
         }
@@ -174,10 +176,10 @@ int Custom::queryServiceStatus(const std::string &serviceName) // 阅读完成
     return serviceStatus;
 }
 
-// 关闭主运控服务（sport_mode）
-void Custom::activateService(const std::string &serviceName, int activate) // 阅读完成
+// 关闭主运控服务（sport_mode） √
+void Custom::SwitchService(const std::string &serviceName, uint32_t status) // 阅读完成
 {
-    rsc.ServiceSwitch(serviceName, activate);
+    rsc.ServiceSwitch(serviceName, status);
 }
 
 // 读取底层状态
@@ -217,9 +219,9 @@ void Custom::lcm_send() // 阅读完成
     {
         // roll pitch yaw
         body_state_simple.rpy[i] = low_state.imu_state().rpy()[i];
-        // IMU 三轴加速度？应该是 IMU 三轴线性加速度？
+        // 三轴线性加速度
         body_state_simple.aBody[i] = low_state.imu_state().accelerometer()[i];
-        // IMU 三轴线性加速度？应该是 IMU 三轴角速度？
+        // 三轴角速度
         body_state_simple.omegaBody[i] = low_state.imu_state().gyroscope()[i];
     }
     for (int i = 0; i < 4; i++)
@@ -227,7 +229,7 @@ void Custom::lcm_send() // 阅读完成
         // 足端触地力
         body_state_simple.contact_estimate[i] = low_state.foot_force()[i];
     }
-    // 遥控器按键值和摇杆数值
+    // 遥控器摇杆数值和按键值
     rc_command.left_stick[0] = joystick.lx();
     rc_command.left_stick[1] = joystick.ly();
     rc_command.right_stick[0] = joystick.rx();
@@ -273,8 +275,11 @@ void Custom::lcm_send() // 阅读完成
     rc_command.mode = mode;
 
     lc.publish("leg_control_data", &leg_control_lcm_data);
+    // 发布机器人的状态信息到LCM中间件
     lc.publish("state_estimator_data", &body_state_simple);
+    // 发步机器人姿态信息到LCM中间件
     lc.publish("rc_command", &rc_command);
+    // 发步遥控器信号到LCM中间件
 
     // std::cout << "loop: messsages are sending ......" << std::endl;
 }
@@ -305,7 +310,7 @@ void Custom::lcm_receive() // 阅读完成
 // 此线程作用：初始化low_cmd，经过合理的状态机后，电机将执行神经网络的输出
 
 // InitLowCmd()该函数用于初始化，设置 LowCmd 类型的 low_cmd 结构体。该函数放置于 Custom 类的构造函数运行一次即可。
-void Custom::InitLowCmd() // 阅读完成
+void Custom::InitLowCmd() // 阅读完成 √
 {
     /* LowCmd 类型中的 head 成员 表示帧头，此帧头将用于 CRC 校验。head、levelFlag、gpio 等按例程所示设置为默认值即可。*/
     low_cmd.head()[0] = 0xFE;
@@ -342,23 +347,23 @@ void Custom::SetNominalPose() // 阅读完成
     {
         joint_command_simple.qd_des[i] = 0;
         joint_command_simple.tau_ff[i] = 0;
-        joint_command_simple.kp[i] = 20;
-        joint_command_simple.kd[i] = 0.5;
+        joint_command_simple.kp[i] = 20;  // kp = 20
+        joint_command_simple.kd[i] = 0.5; // kd = 0.5
     }
 
     // 趴下时的关节角度
-    joint_command_simple.q_des[0] = -0.3;    // 左前机身关节
-    joint_command_simple.q_des[1] = 1.2;     // 左前大腿关节
-    joint_command_simple.q_des[2] = -2.721;  // 左前小腿关节
-    joint_command_simple.q_des[3] = 0.3;     // 右前机身关节
-    joint_command_simple.q_des[4] = 1.2;     // 右前大腿关节
-    joint_command_simple.q_des[5] = -2.721;  // 右前小腿关节
-    joint_command_simple.q_des[6] = -0.3;    // 左后机身关节
-    joint_command_simple.q_des[7] = 1.2;     // 左后大腿关节
-    joint_command_simple.q_des[8] = -2.721;  // 左后小腿关节
-    joint_command_simple.q_des[9] = 0.3;     // 右后机身关节
-    joint_command_simple.q_des[10] = 1.2;    // 右后大腿关节
-    joint_command_simple.q_des[11] = -2.721; // 右后小腿关节
+    joint_command_simple.q_des[0] = -0.3;    // 左前机身关节    右前机身关节
+    joint_command_simple.q_des[1] = 1.2;     // 左前大腿关节    右前大腿关节
+    joint_command_simple.q_des[2] = -2.721;  // 左前小腿关节    右前小腿关节
+    joint_command_simple.q_des[3] = 0.3;     // 右前机身关节    左前机身关节
+    joint_command_simple.q_des[4] = 1.2;     // 右前大腿关节    左前大腿关节
+    joint_command_simple.q_des[5] = -2.721;  // 右前小腿关节    左前小腿关节
+    joint_command_simple.q_des[6] = -0.3;    // 左后机身关节    右后机身关节
+    joint_command_simple.q_des[7] = 1.2;     // 左后大腿关节    右后大腿关节
+    joint_command_simple.q_des[8] = -2.721;  // 左后小腿关节    右后小腿关节
+    joint_command_simple.q_des[9] = 0.3;     // 右后机身关节    左后机身关节
+    joint_command_simple.q_des[10] = 1.2;    // 右后大腿关节    左后大腿关节
+    joint_command_simple.q_des[11] = -2.721; // 右后小腿关节    左后小腿关节
 
     std::cout << "SET NOMINAL POSE" << std::endl;
 }
@@ -368,7 +373,7 @@ void Custom::LowCmdWrite() // 阅读完成
 {
     motiontime++; // 底层控制指令的下发次数
 
-    if (_firstRun && leg_control_lcm_data.q[0] != 0)
+    if (firstRun && leg_control_lcm_data.q[0] != 0)
     {
         for (int i = 0; i < 12; i++)
         {
@@ -381,7 +386,7 @@ void Custom::LowCmdWrite() // 阅读完成
             key.components.B = 0;
             key.components.L2 = 0;
         }
-        _firstRun = false;
+        firstRun = false;
     }
 
     // 写了一段安全冗余代码
@@ -466,7 +471,7 @@ void Custom::LowCmdWrite() // 阅读完成
 
 void Custom::Init() // 阅读完成
 {
-    _firstRun = true;
+    firstRun = true;
     InitLowCmd();
     SetNominalPose();
 
@@ -508,37 +513,40 @@ int main(int argc, char **argv)
 {
     if (argc < 2)
     {
-        std::cout << "Usage: " << argv[0] << " networkInterface" << std::endl;
+        std::cout << "Usage: ./" << argv[0] << " networkInterface" << std::endl;
         exit(-1);
     }
 
-    std::cout << "Communication level is set to LOW-level." << std::endl
-              << "WARNING: Make sure the robot is hung up." << std::endl
-              << "Caution: The scripts is about to shutdown Unitree sport_mode Service." << std::endl
-              << "Press Enter to continue..." << std::endl;
+    std::cout << "Control level is set to LOW-level." << std::endl
+              << "WARNING: Make sure the robot is lie down." << std::endl
+              << "Caution: “sport_mode” service will be shut down." << std::endl
+              << "Press Enter to continue." << std::endl;
     std::cin.ignore();
 
-    unitree::robot::ChannelFactory::Instance()->Init(0, argv[1]); // 传入本机的网卡地址（PC or Jetson Orin）
+    unitree::robot::ChannelFactory::Instance()->Init(0, argv[1]); // 传入本机的网卡地址（PC or Jetson Orin NX）
 
     Custom custom;
+    custom.InitRobotStateClient();
 
     // 关闭 Go2 的主运控服务（sport_mode）
-    custom.InitRobotStateClient();
-    if (custom.queryServiceStatus("sport_mode"))
+    if (custom.QueryServiceStatus("sport_mode"))
     {
-        std::cout << "Trying to deactivate the service: " << "sport_mode" << std::endl;
-        custom.activateService("sport_mode", 0);
-        sleep(0.5);
-        if (!custom.queryServiceStatus("sport_mode"))
+        std::cout << "Try to deactivate the service: " << "sport_mode" << std::endl;
+        custom.SwitchService("sport_mode", 0);
+        sleep(1);
+        if (!custom.QueryServiceStatus("sport_mode"))
         {
-            std::cout << "Trying to deactivate the service: " << "sport_mode" << std::endl;
+            std::cout << "Service: " << "sport_mode" << " has been deactivated successfully." << std::endl;
+            std::cout << "Next step is to set up LCM communication." << std::endl
+                      << "Press Enter to continue." << std::endl;
+            std::cin.ignore();
         }
     }
     else
     {
-        std::cout << "sportd_mode is already deactivated now" << std::endl
-                  << "next step is setting up communication" << std::endl
-                  << "Press Enter to continue..." << std::endl;
+        std::cout << "\"sport_mode\" service is already inactive now." << std::endl
+                  << "Next step is to set up LCM communication." << std::endl
+                  << "Press Enter to continue." << std::endl;
         std::cin.ignore();
     }
 

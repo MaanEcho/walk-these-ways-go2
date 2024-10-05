@@ -9,7 +9,7 @@ from go2_gym_deploy.utils.logger import MultiLogger
 
 
 class DeploymentRunner:
-    def __init__(self, experiment_name="unnamed", se=None, log_root="."):
+    def __init__(self, experiment_name="unnamed", se=None, log_root="."):   # 阅读完成
         self.agents = {}
         self.policy = None
         self.command_profile = None
@@ -23,28 +23,34 @@ class DeploymentRunner:
         self.command_agent_name = None
 
         self.triggered_commands = {i: None for i in range(4)} # command profiles for each action button on the controller
+        # 遥控器上四个按键X、Y、B、A（顺序不一定对）的命令配置文件
         self.button_states = np.zeros(4)
+        # 按键状态
 
         self.is_currently_probing = False
+        # 是否正在探测？（目前不知道是什么意思）
         self.is_currently_logging = [False, False, False, False]
+        # 是否正在记录？（目前不知道是什么意思）
 
-    def init_log_filename(self):
+    def init_log_filename(self):    # 阅读完成
         datetime = time.strftime("%Y/%m_%d/%H_%M_%S")
+        # 生成当前日期和时间的字符串格式
 
         for i in range(100):
+        # 尝试创建一个带有时间戳和索引的日志文件夹（最多尝试100次）
             try:
                 os.makedirs(f"{self.log_root}/{datetime}_{i}")
                 self.log_filename = f"{self.log_root}/{datetime}_{i}/log.pkl"
+                # 设置日志文件名，并存储在self.log_filename中
                 return
             except FileExistsError:
                 continue
-
 
     def add_open_loop_agent(self, agent, name):
         self.agents[name] = agent
         self.logger.add_robot(name, agent.env.cfg)
 
-    def add_control_agent(self, agent, name):
+    def add_control_agent(self, agent, name):    # 阅读完成
         self.control_agent_name = name
         self.agents[name] = agent
         self.logger.add_robot(name, agent.env.cfg)
@@ -55,15 +61,15 @@ class DeploymentRunner:
     def set_command_agents(self, name):
         self.command_agent = name
 
-    def add_policy(self, policy):
+    def add_policy(self, policy):    # 阅读完成
         self.policy = policy
 
-    def add_command_profile(self, command_profile):
+    def add_command_profile(self, command_profile):  # 阅读完成
         self.command_profile = command_profile
 
-
-    def calibrate(self, wait=True, low=False):
+    def calibrate(self, wait=True, low=False):  # 
         # first, if the robot is not in nominal pose, move slowly to the nominal pose
+        # 首先，如果机器人不在标准姿态（nominal pose），则缓慢地将其移动到标准姿态。
         for agent_name in self.agents.keys():
             if hasattr(self.agents[agent_name], "get_obs"):
                 agent = self.agents[agent_name]
@@ -82,6 +88,7 @@ class DeploymentRunner:
                 while wait:
                     self.button_states = self.command_profile.get_buttons()
                     if self.command_profile.state_estimator.right_lower_right_switch_pressed:
+                    # 如果R2键被按下，则开始校准。
                         print(">>>>>>>>>>>>>>> R2 is pressed <<<<<<<<<<<<<")
                         self.command_profile.state_estimator.right_lower_right_switch_pressed = False
                         break
@@ -92,6 +99,7 @@ class DeploymentRunner:
                 while np.max(np.abs(target - final_goal)) > 0.01:
                     target -= np.clip((target - final_goal), -0.05, 0.05)
                     target_sequence += [copy.deepcopy(target)]
+                # 逐步调整target使其接近final_goal，直到两者的最大差异小于0.01。
                 for target in target_sequence:
                     next_target = target
                     if isinstance(agent.cfg, dict):
@@ -123,7 +131,6 @@ class DeploymentRunner:
 
         return control_obs
 
-
     def run(self, num_log_steps=1000000000, max_steps=100000000, logging=True):
         assert self.control_agent_name is not None, "cannot deploy, runner has no control agent!"
         assert self.policy is not None, "cannot deploy, runner has no policy!"
@@ -145,6 +152,7 @@ class DeploymentRunner:
 
                 policy_info = {}
                 action = self.policy(control_obs, policy_info)
+                # 输入观测和潜在变量，输出动作
 
                 for agent_name in self.agents.keys():
                     obs, ret, done, info = self.agents[agent_name].step(action)
@@ -165,9 +173,12 @@ class DeploymentRunner:
 
                 # check for logging command
                 prev_button_states = self.button_states[:]
+                # 记录上一次的按键状态
                 self.button_states = self.command_profile.get_buttons()
+                # 读取当前的按键状态
 
                 if self.command_profile.state_estimator.left_lower_left_switch_pressed:
+                # 如果L2键被按下，则开始记录。
                     if not self.is_currently_probing:
                         print("START LOGGING")
                         self.is_currently_probing = True
@@ -186,6 +197,7 @@ class DeploymentRunner:
                         time.sleep(1)
                         control_obs = self.agents[self.control_agent_name].reset()
                     self.command_profile.state_estimator.left_lower_left_switch_pressed = False
+                    # 重置L2键状态
 
                 for button in range(4):
                     if self.command_profile.currently_triggered[button]:
@@ -207,9 +219,11 @@ class DeploymentRunner:
                             control_obs = self.agents[self.control_agent_name].reset()
 
                 if self.command_profile.state_estimator.right_lower_right_switch_pressed:
+                # 如果R2键被按下，则开始校准。
                     control_obs = self.calibrate(wait=False)
                     time.sleep(1)
                     self.command_profile.state_estimator.right_lower_right_switch_pressed = False
+                    # 重置R2键状态
                     # self.button_states = self.command_profile.get_buttons()
                     while not self.command_profile.state_estimator.right_lower_right_switch_pressed:
                         time.sleep(0.01)

@@ -1,13 +1,13 @@
 struct rc_command_lcmt
 {
-    int16_t mode;
-    float left_stick[2];
-    float right_stick[2];
-    float knobs[2];
-    int16_t left_upper_switch;
-    int16_t left_lower_left_switch;
-    int16_t left_lower_right_switch;
-    int16_t right_upper_switch;
-    int16_t right_lower_left_switch;
-    int16_t right_lower_right_switch;
+    int16_t mode;   // 模式
+    float left_stick[2];    // 左摇杆x、y方向上的数值
+    float right_stick[2];    // 右摇杆x、y方向上的数值
+    float knobs[2]; // 目前在本项目中没有见到，不清楚其作用
+    int16_t left_upper_switch;  // L1键
+    int16_t left_lower_left_switch;  // L2键
+    int16_t left_lower_right_switch;    // 在本项目中无效
+    int16_t right_upper_switch;  // R1键
+    int16_t right_lower_left_switch;    // 在本项目中无效
+    int16_t right_lower_right_switch;   // R2键
 }
