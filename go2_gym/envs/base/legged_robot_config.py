@@ -4,103 +4,138 @@ from params_proto import PrefixProto, ParamsProto
 
 class Cfg(PrefixProto, cli=False):
     # cli=False在这里不是常规的python语法。应该是跟params_proto库有关，可能这个库允许在类的定义中传递额外的参数。
+
+    # 环境
     class env(PrefixProto, cli=False):
-        num_envs = 4096
-        num_observations = 235
-        num_scalar_observations = 42
+        num_envs = 4096 # 环境数量
+        num_observations = 235  # 观测空间维度
+        num_scalar_observations = 42    # 标量观测空间维度？（不确定理解是否正确）
         # if not None a privilige_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
-        num_privileged_obs = 18
-        privileged_future_horizon = 1
-        num_actions = 12
-        num_observation_history = 15
-        env_spacing = 3.  # not used with heightfields/trimeshes
-        send_timeouts = True  # send time out information to the algorithm
-        episode_length_s = 20  # episode length in seconds
-        observe_vel = True
-        observe_only_ang_vel = False
-        observe_only_lin_vel = False
-        observe_yaw = False
-        observe_contact_states = False
-        observe_command = True
-        observe_height_command = False
-        observe_gait_commands = False
-        observe_timing_parameter = False
-        observe_clock_inputs = False
-        observe_two_prev_actions = False
-        observe_imu = False
-        record_video = True
-        recording_width_px = 360
-        recording_height_px = 240
-        recording_mode = "COLOR"
-        num_recording_envs = 1
-        debug_viz = False
-        all_agents_share = False
+        # 如果不是None，step()函数会返回一个特权观测缓冲区（用于非对称训练的critic观测）。否则，返回None。
+        num_privileged_obs = 18 # 特权观测维度
+        privileged_future_horizon = 1   # 不清楚具体含义
+        num_actions = 12    # 动作空间维度
+        num_observation_history = 15    # 观测历史长度
+        env_spacing = 3.    # 不清楚具体含义
+        # not used with heightfields/trimeshes
+        # heightfields/trimeshes不使用
+        send_timeouts = True    # 是否发送超时信息给算法
+        # send time out information to the algorithm
+        # 是否发送超时信息给算法
+        episode_length_s = 20   # 回合长度（以秒为单位）
+        # episode length in seconds
+        # 回合长度（以秒为单位）
+        observe_vel = True  # 是否观测速度
+        observe_only_ang_vel = False    # 是否仅观测角速度
+        observe_only_lin_vel = False    # 是否仅观测线速度
+        observe_yaw = False  # 是否观测偏航角
+        observe_contact_states = False  # 是否观测接触状态
+        observe_command = True  # 是否观测指令
+        observe_height_command = False  # 是否观测高度指令
+        observe_gait_commands = False   # 是否观测步态指令
+        observe_timing_parameter = False    # 是否观测时间参数（不理解具体含义）
+        observe_clock_inputs = False    # 是否观测时钟输入？（不确定理解是否正确）
+        observe_two_prev_actions = False    # 是否观测前两个时间步的动作
+        observe_imu = False  # 是否观测IMU
+        record_video = True # 是否录制视频
+        recording_width_px = 360    # 录制视频的宽度（像素）
+        recording_height_px = 240   # 录制视频的高度（像素）
+        recording_mode = "COLOR"    # 录制视频的模式
+        num_recording_envs = 1  # 录制视频的环境数量
+        debug_viz = False   # 是否显示调试视觉？（不理解具体含义）
+        all_agents_share = False    # 是否所有智能体共享参数？（不确定理解是否正确）
 
-        priv_observe_friction = True
-        priv_observe_friction_indep = True
-        priv_observe_ground_friction = False
-        priv_observe_ground_friction_per_foot = False
-        priv_observe_restitution = True
-        priv_observe_base_mass = True
-        priv_observe_com_displacement = True
-        priv_observe_motor_strength = False
-        priv_observe_motor_offset = False
-        priv_observe_joint_friction = True
-        priv_observe_Kp_factor = True
-        priv_observe_Kd_factor = True
-        priv_observe_contact_forces = False
-        priv_observe_contact_states = False
-        priv_observe_body_velocity = False
-        priv_observe_foot_height = False
-        priv_observe_body_height = False
-        priv_observe_gravity = False
-        priv_observe_terrain_type = False
-        priv_observe_clock_inputs = False
-        priv_observe_doubletime_clock_inputs = False
-        priv_observe_halftime_clock_inputs = False
-        priv_observe_desired_contact_states = False
-        priv_observe_dummy_variable = False
+        priv_observe_friction = True    # 是否特权观测摩擦力
+        priv_observe_friction_indep = True  # 不理解具体含义
+        priv_observe_ground_friction = False    # 是否特权观测地面摩擦力
+        priv_observe_ground_friction_per_foot = False   # 是否特权观测每个足端的地面摩擦力
+        priv_observe_restitution = True # 是否特权观测恢复力
+        priv_observe_base_mass = True   # 是否特权观测机身质量
+        priv_observe_com_displacement = True    # 是否特权观测COM位移（不理解具体含义）
+        priv_observe_motor_strength = False # 是否特权观测电机强度？（不确定理解是否正确）
+        priv_observe_motor_offset = False   # 是否特权观测电机偏移？（不理解具体含义）
+        priv_observe_joint_friction = True   # 是否特权观测关节摩擦力
+        priv_observe_Kp_factor = True    # 是否特权观测Kp因子
+        priv_observe_Kd_factor = True    # 是否特权观测Kd因子
+        priv_observe_contact_forces = False  # 是否特权观测足端接触力
+        priv_observe_contact_states = False  # 是否特权观测足端接触状态
+        priv_observe_body_velocity = False  # 是否特权观测机身速度
+        priv_observe_foot_height = False    # 是否特权观测足端高度
+        priv_observe_body_height = False    # 是否特权观测机身高度
+        priv_observe_gravity = False      # 是否特权观测重力
+        priv_observe_terrain_type = False    # 是否特权观测地形类型
+        priv_observe_clock_inputs = False    # 是否特权观测时钟输入？（不理解具体含义）
+        priv_observe_doubletime_clock_inputs = False    # 是否特权观测双时间步时钟输入？（不理解具体含义）
+        priv_observe_halftime_clock_inputs = False    # 是否特权观测半时间步时钟输入？（不理解具体含义）
+        priv_observe_desired_contact_states = False  # 是否特权观测期望足端接触状态
+        priv_observe_dummy_variable = False  # 是否特权观测虚拟变量？（不理解具体含义）
 
+    # 地形
     class terrain(PrefixProto, cli=False):
-        mesh_type = 'trimesh'  # "heightfield" # none, plane, heightfield or trimesh
-        horizontal_scale = 0.1  # [m] 0.1
-        vertical_scale = 0.005  # [m]
-        border_size = 0  # 25 # [m]
-        curriculum = True
-        static_friction = 1.0
-        dynamic_friction = 1.0
-        restitution = 0.0
-        terrain_noise_magnitude = 0.1
+        mesh_type = 'trimesh'   # 地形类型？
+        # "heightfield" # none, plane, heightfield or trimesh
+        # “高度场” # 无，平面，高度场或三角网格
+        horizontal_scale = 0.1  # 水平方向尺度大小
+        # [m] 0.1
+        vertical_scale = 0.005  # 竖直方向尺度大小
+        # [m]
+        border_size = 0 # 边界尺寸
+        # 25 # [m]
+        curriculum = True   # 是否使用课程学习
+        static_friction = 1.0   # 静摩擦力
+        dynamic_friction = 1.0  # 动摩擦力
+        restitution = 0.0   # 弹性系数
+        terrain_noise_magnitude = 0.1   # 地形噪声大小
         # rough terrain only:
-        terrain_smoothness = 0.005
-        measure_heights = True
+        # 仅适用于粗糙地形：
+        terrain_smoothness = 0.005  # 地形平滑度
+        measure_heights = True  # 是否测量高度
         # 1mx1.6m rectangle (without center line)
+        # 1m x 1.6m矩形（不含中心线）
         measured_points_x = [-0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+        # x方向上的测量点
         measured_points_y = [-0.5, -0.4, -0.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3, 0.4, 0.5]
-        selected = False  # select a unique terrain type and pass all arguments
-        terrain_kwargs = None  # Dict of arguments for selected terrain
-        min_init_terrain_level = 0
-        max_init_terrain_level = 5  # starting curriculum state
-        terrain_length = 0.5 #defaul = 8.
-        terrain_width = 0.5 # default = 8.
-        num_rows = 10  # number of terrain rows (levels)
-        num_cols = 20  # number of terrain cols (types)
+        # y方向上的测量点
+        selected = False    # 是否选择一个独特的地形类型并传递所有参数
+        # select a unique terrain type and pass all arguments
+        # 选择一个独特的地形类型并传递所有参数
+        terrain_kwargs = None   # 所选择的地形类型的参数字典
+        # Dict of arguments for selected terrain
+        min_init_terrain_level = 0  # 最小初始地形级别
+        max_init_terrain_level = 5  # 最大初始地形级别
+        # starting curriculum state
+        # 初始课程状态
+        terrain_length = 0.5    # 地形长度
+        # defaul = 8.
+        terrain_width = 0.5    # 地形宽度
+        # default = 8.
+        num_rows = 10   # 地形行数
+        # number of terrain rows (levels)
+        # 地形行数（等级）
+        num_cols = 20   # 地形列数
+        # number of terrain cols (types)
+        # 地形列数（类型）
         # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
-        terrain_proportions = [0.1, 0.1, 0.35, 0.25, 0.2]
+        # 地形类型：[平滑斜坡，粗糙斜坡，上升台阶，下降台阶，离散]
+        terrain_proportions = [0.1, 0.1, 0.35, 0.25, 0.2]   # 地形比例
         # trimesh only:
-        slope_treshold = 0.75  # slopes above this threshold will be corrected to vertical surfaces
-        difficulty_scale = 1.
-        x_init_range = 1.
-        y_init_range = 1.
-        yaw_init_range = 0.
-        x_init_offset = 0.
-        y_init_offset = 0.
-        teleport_robots = True
-        teleport_thresh = 2.0
-        max_platform_height = 0.2
-        center_robots = False
-        center_span = 5
+        # 仅适用于三角网格：
+        slope_treshold = 0.75   # 斜坡阈值，单位：弧度
+        # slopes above this threshold will be corrected to vertical surfaces
+        # 斜坡的阈值，超过该阈值的斜坡将被修正为垂直表面
+        difficulty_scale = 1.   # 难度缩放因子
+        x_init_range = 1.   # x方向的初始范围
+        y_init_range = 1.   # y方向的初始范围
+        yaw_init_range = 0. # 偏航角初始范围
+        x_init_offset = 0.  # x方向的初始偏移
+        y_init_offset = 0.  # y方向的初始偏移
+        teleport_robots = True  # 是否随机传送机器人
+        teleport_thresh = 2.0   # 传送阈值
+        max_platform_height = 0.2    # 最大平台高度
+        center_robots = False    # 是否在地形中心放置机器人（不确定理解是否正确）
+        center_span = 5 # 中心范围
 
+    # 命令
     class commands(PrefixProto, cli=False):
         command_curriculum = False
         max_reverse_curriculum = 1.
@@ -192,12 +227,14 @@ class Cfg(PrefixProto, cli=False):
         balance_gait_distribution = True
         gaitwise_curricula = True
 
+    # 课程门槛
     class curriculum_thresholds(PrefixProto, cli=False):
         tracking_lin_vel = 0.8  # closer to 1 is tighter
         tracking_ang_vel = 0.5
         tracking_contacts_shaped_force = 0.8  # closer to 1 is tighter
         tracking_contacts_shaped_vel = 0.8
 
+    # 初始状态
     class init_state(PrefixProto, cli=False):
         pos = [0.0, 0.0, 1.]  # x,y,z [m]
         rot = [0.0, 0.0, 0.0, 1.0]  # x,y,z,w [quat]
@@ -206,6 +243,7 @@ class Cfg(PrefixProto, cli=False):
         # target angles when action = 0.0
         default_joint_angles = {"joint_a": 0., "joint_b": 0.}
 
+    # 控制
     class control(PrefixProto, cli=False):
         control_type = 'actuator_net' #'P'  # P: position, V: velocity, T: torques
         # PD Drive parameters:
@@ -217,6 +255,7 @@ class Cfg(PrefixProto, cli=False):
         # decimation: Number of control action updates @ sim DT per policy DT
         decimation = 4
 
+    # 资产
     class asset(PrefixProto, cli=False):
         file = ""
         foot_name = "None"  # name of the feet bodies, used to index body state and contact force tensors
@@ -240,6 +279,7 @@ class Cfg(PrefixProto, cli=False):
         armature = 0.
         thickness = 0.01
 
+    # 域随机化
     class domain_rand(PrefixProto, cli=False):
         rand_interval_s = 10
         randomize_rigids_after_start = True
@@ -269,6 +309,7 @@ class Cfg(PrefixProto, cli=False):
         randomize_lag_timesteps = True
         lag_timesteps = 6
 
+    # 奖励
     class rewards(PrefixProto, cli=False):
         only_positive_rewards = True  # if true negative total rewards are clipped at zero (avoids early termination problems)
         only_positive_rewards_ji22_style = False
@@ -294,6 +335,7 @@ class Cfg(PrefixProto, cli=False):
         gait_vel_sigma = 0.5
         footswing_height = 0.09
 
+    # 奖励权重
     class reward_scales(ParamsProto, cli=False):
         termination = -0.0
         tracking_lin_vel = 1.0
@@ -331,6 +373,7 @@ class Cfg(PrefixProto, cli=False):
         feet_impact_vel = 0.0
         raibert_heuristic = 0.0
 
+    # 归一化
     class normalization(PrefixProto, cli=False):
         clip_observations = 100.
         clip_actions = 100.
@@ -353,6 +396,7 @@ class Cfg(PrefixProto, cli=False):
         gravity_range = [-1.0, 1.0]
         motion = [-0.01, 0.01]
 
+    # 观测权重？
     class obs_scales(PrefixProto, cli=False):
         lin_vel = 2.0
         ang_vel = 0.25
@@ -375,10 +419,12 @@ class Cfg(PrefixProto, cli=False):
         rgb_image = 1.0
         depth_image = 1.0
 
+    # 噪声
     class noise(PrefixProto, cli=False):
         add_noise = True
         noise_level = 1.0  # scales other values
 
+    # 噪声权重
     class noise_scales(PrefixProto, cli=False):
         dof_pos = 0.01
         dof_vel = 1.5
@@ -394,11 +440,13 @@ class Cfg(PrefixProto, cli=False):
         depth_image = 0.0
 
     # viewer camera:
+    # 观察者相机设置
     class viewer(PrefixProto, cli=False):
         ref_env = 0
         pos = [10, 0, 6]  # [m]
         lookat = [11., 5, 3.]  # [m]
 
+    # 仿真设置
     class sim(PrefixProto, cli=False):
         dt = 0.005
         substeps = 1
