@@ -13,15 +13,14 @@ from go2_gym_deploy.lcm_types.state_estimator_lcmt import state_estimator_lcmt
 # from go1_gym_deploy.lcm_types.camera_message_rect_wide import camera_message_rect_wide
 
 
-def get_rpy_from_quaternion(q):
+def get_rpy_from_quaternion(q): # 阅读完成 在本项目中未调用
     w, x, y, z = q
     r = np.arctan2(2 * (w * x + y * z), 1 - 2 * (x ** 2 + y ** 2))
     p = np.arcsin(2 * (w * y - z * x))
     y = np.arctan2(2 * (w * z + x * y), 1 - 2 * (y ** 2 + z ** 2))
     return np.array([r, p, y])
 
-
-def get_rotation_matrix_from_rpy(rpy):
+def get_rotation_matrix_from_rpy(rpy):  # 阅读完成
     """
     Get rotation matrix from the given quaternion.
     Args:
@@ -48,27 +47,31 @@ def get_rotation_matrix_from_rpy(rpy):
     rot = np.dot(R_z, np.dot(R_y, R_x))
     return rot
 
-
 class StateEstimator:
-    def __init__(self, lc, use_cameras=False): # default use_cameras=True 阅读完成
-        
+    def __init__(self, lc, use_cameras=False): # default use_cameras=True 阅读完成 √
+        """初始化涉及到的成员变量，订阅 Go2 机器人的电机状态、姿态信息和遥控器信号"""
+        self.lc = lc
+        # LCM 通讯相关
+
         # reverse legs
         # 这里腿的顺序为什么要转换？
+        # 应该是因为 Go2 机器人腿的顺序是右前→左前→右后→左后，而 MIT Cheetah 机器人腿的顺序是左前→右前→左后→右后，所以需要转换。
         self.joint_idxs = [3, 4, 5, 0, 1, 2, 9, 10, 11, 6, 7, 8]
         # 关节电机索引
+        # Go2 中腿的顺序：左前→右前→左后→右后
+        # [0, 3, 6, 9]：机身关节电机；[1, 4, 7, 10]：大腿关节电机；[2, 5, 8, 11]：小腿关节电机
+        # self.joint_idxs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
         self.contact_idxs = [1, 0, 3, 2]
         # 四个足端索引
-        # self.joint_idxs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-
-        self.lc = lc
-        # 跟LCM相关
+        # Go2 中足端的顺序：0-右前，1-左前，2-右后, 3-左后
+        # MIT Cheetah 机器人足端的顺序：0-左前，1-右前，2-左后, 3-右后
 
         self.joint_pos = np.zeros(12)
         # 关节位置
         self.joint_vel = np.zeros(12)
         # 关节速度
         self.tau_est = np.zeros(12)
-        # 估计的扭矩
+        # 关节电机扭矩
         self.world_lin_vel = np.zeros(3)
         # 世界坐标系下的线速度
         self.world_ang_vel = np.zeros(3)
@@ -77,11 +80,13 @@ class StateEstimator:
         # 欧拉角
         self.R = np.eye(3)
         # 旋转矩阵
-        self.buf_idx = 0
-        # 缓冲区索引（目前不知道用途）
+        self.contact_state = np.ones(4)
+        # 足端接触状态
 
-        self.smoothing_length = 12
-        # 表示用作角速度平滑处理的历史数据长度
+        self.body_lin_vel = np.zeros(3)
+        # 机身坐标系下的线速度
+        self.body_ang_vel = np.zeros(3)
+        # 机身坐标系下的角速度
         self.deuler_history = np.zeros((self.smoothing_length, 3))
         # 包含历史欧拉角变化的数组，表示某个时间点的欧拉角变化，用于计算角速度的平滑值
         self.dt_history = np.zeros((self.smoothing_length, 1))
@@ -89,17 +94,13 @@ class StateEstimator:
         self.euler_prev = np.zeros(3)
         # 上一次的欧拉角？
         self.timuprev = time.time()
-        # 生成时间戳timuprev（目前不知道用途）
-
-        self.body_lin_vel = np.zeros(3)
-        # 机身坐标系下的线速度
-        self.body_ang_vel = np.zeros(3)
-        # 机身坐标系下的角速度
+        # 时间戳timuprev，记录上一次更新欧拉角的时间戳
+        self.buf_idx = 0
+        # 缓冲区索引，用于循环缓冲用作角速度平滑处理的历史数据
+        self.smoothing_length = 12
+        # 表示用作角速度平滑处理的历史数据长度
         self.smoothing_ratio = 0.2
         # 平滑系数，用于计算角速度的平滑值
-
-        self.contact_state = np.ones(4)
-        # 足端接触状态
 
         self.mode = 0
         # 某种模式（目前不知道用途）
@@ -111,17 +112,18 @@ class StateEstimator:
         # 左摇杆。两个值分别代表左摇杆x方向上的值和y方向上的值，范围是[-1,1]。
         self.right_stick = [0, 0]
         # 右摇杆。两个值分别代表右摇杆x方向上的值和y方向上的值，范围是[-1,1]。
+
         self.left_upper_switch = 0
         # L1键是否松开
         self.left_lower_left_switch = 0
         # L2键是否松开
         self.left_lower_right_switch = 0
-        # MIT Cheetah项目用的不是宇树的遥控器，宇树的没有这个按键。
+        # 应该是MIT Cheetah项目使用的遥控器上的按键，宇树的没有这个按键。
 
         self.right_upper_switch = 0
         # R1键是否松开
         self.right_lower_left_switch = 0
-        # MIT Cheetah项目用的不是宇树的遥控器，宇树的没有这个按键。
+        # 应该是MIT Cheetah项目使用的遥控器上的按键，宇树的没有这个按键。
         self.right_lower_right_switch = 0
         # R2键是否松开
 
@@ -130,12 +132,12 @@ class StateEstimator:
         self.left_lower_left_switch_pressed = 0
         # L2键是否按下
         self.left_lower_right_switch_pressed = 0
-        # MIT Cheetah项目用的不是宇树的遥控器，宇树的没有这个按键。
+        # 应该是MIT Cheetah项目使用的遥控器上的按键，宇树的没有这个按键。
 
         self.right_upper_switch_pressed = 0
         # R1键是否按下
         self.right_lower_left_switch_pressed = 0
-        # MIT Cheetah项目用的不是宇树的遥控器，宇树的没有这个按键。
+        # 应该是MIT Cheetah项目使用的遥控器上的按键，宇树的没有这个按键。
         self.right_lower_right_switch_pressed = 0
         # R2键是否按下
 
@@ -149,38 +151,39 @@ class StateEstimator:
         self.cmd_duration = 0.5
         # 控制持续时间？（应该也是跟相位phase有关的）
 
-
         self.init_time = time.time()
-        # 生成时间戳init_time（目前不知道用途）
+        # 时间戳init_time，记录初始化时间
         self.received_first_legdata = False
-        # 是否是第一次接收到来自lcm_position_go2的机器人状态信息
+        # 标志位，判断是否是第一次接收到来自 lcm_position_go2 发布的机器人状态信息
 
+        # LCM: "leg_control_data" channel
         self.legdata_state_subscription = self.lc.subscribe("leg_control_data", self._legdata_cb)
-        # 订阅机器人的状态信息
+        # 订阅 Go2 机器人的电机状态信息
+        # LCM: "state_estimator_data" channel
         self.imu_subscription = self.lc.subscribe("state_estimator_data", self._imu_cb)
-        # 订阅机器人姿态信息
+        # 订阅 Go2 机器人的姿态信息
+        # LCM: "rc_command" channel
         self.rc_command_subscription = self.lc.subscribe("rc_command", self._rc_command_cb)
         # 订阅遥控器信号
-        # 上面的三句代码和lcm_position_go2中Custom::lcm_send()的最后三句代码相对应
         
-        # -----------------------------------------------------------------------------------------------------
+        # # -----------------------------------------------------------------------------------------------------
         # if use_cameras:
         #     for cam_id in [1, 2, 3, 4, 5]:
         #         self.camera_subscription = self.lc.subscribe(f"camera{cam_id}", self._camera_cb)
         #     self.camera_names = ["front", "bottom", "left", "right", "rear"]
         #     for cam_name in self.camera_names:
         #         self.camera_subscription = self.lc.subscribe(f"rect_image_{cam_name}", self._rect_camera_cb)
-        # -----------------------------------------------------------------------------------------------------
-        self.camera_image_left = None
-        # 左侧相机图像
-        self.camera_image_right = None
-        # 右侧相机图像
-        self.camera_image_front = None
-        # 前侧相机图像
-        self.camera_image_bottom = None
-        # 底部相机图像
-        self.camera_image_rear = None
-        # 后侧相机图像
+        # self.camera_image_left = None
+        # # 左侧相机图像
+        # self.camera_image_right = None
+        # # 右侧相机图像
+        # self.camera_image_front = None
+        # # 前侧相机图像
+        # self.camera_image_bottom = None
+        # # 底部相机图像
+        # self.camera_image_rear = None
+        # # 后侧相机图像
+        # # -----------------------------------------------------------------------------------------------------
 
         self.body_loc = np.array([0, 0, 0])
         # 机身在空间中的位置？（相对于什么坐标系不确定）
@@ -356,125 +359,138 @@ class StateEstimator:
     def get_camera_right(self):
         return self.camera_image_right
 
-    def _legdata_cb(self, channel, data):
+    def _legdata_cb(self, channel, data):    # 阅读完成 √
+        """回调函数，处理来自 "leg_control_data" channel 的消息，更新机器人电机状态"""
         # print("update legdata")
         if not self.received_first_legdata:
             self.received_first_legdata = True
             print(f"First legdata: {time.time() - self.init_time}")
+        # 记录第一次接收到来自 lcm_position_go2 发布的机器人状态信息所经过的时间
 
         msg = leg_control_data_lcmt.decode(data)
-        # print(msg.q)
         self.joint_pos = np.array(msg.q)
         self.joint_vel = np.array(msg.qd)
         self.tau_est = np.array(msg.tau_est)
         # print(f"update legdata {msg.id}")
 
-    def _imu_cb(self, channel, data):
+    def _imu_cb(self, channel, data):   # 阅读完成 √
+        """回调函数，处理来自 "state_estimator_data" channel 的消息，更新机器人姿态"""
         # print("update imu")
         msg = state_estimator_lcmt.decode(data)
 
         self.euler = np.array(msg.rpy)
-
         self.R = get_rotation_matrix_from_rpy(self.euler)
-
         self.contact_state = 1.0 * (np.array(msg.contact_estimate) > 200)
 
+        # 循环缓冲
         self.deuler_history[self.buf_idx % self.smoothing_length, :] = msg.rpy - self.euler_prev
         self.dt_history[self.buf_idx % self.smoothing_length] = time.time() - self.timuprev
 
-        self.timuprev = time.time()
-
         self.buf_idx += 1
         self.euler_prev = np.array(msg.rpy)
+        self.timuprev = time.time()
 
-    def _sensor_cb(self, channel, data):
+    def _sensor_cb(self, channel, data):    # 未定义函数
         pass
 
-    def _rc_command_cb(self, channel, data):
+    def _rc_command_cb(self, channel, data):    # 阅读完成  √
+        """回调函数，处理来自 "rc_command" channel 的消息，更新遥控器信号"""
 
         msg = rc_command_lcmt.decode(data)
 
-
         self.left_upper_switch_pressed = ((msg.left_upper_switch and not self.left_upper_switch) or self.left_upper_switch_pressed)
+        # L1键
         self.left_lower_left_switch_pressed = ((msg.left_lower_left_switch and not self.left_lower_left_switch) or self.left_lower_left_switch_pressed)
+        # L2键
         self.left_lower_right_switch_pressed = ((msg.left_lower_right_switch and not self.left_lower_right_switch) or self.left_lower_right_switch_pressed)
+        # 本项目中无实际对应按键
         self.right_upper_switch_pressed = ((msg.right_upper_switch and not self.right_upper_switch) or self.right_upper_switch_pressed)
+        # R1键
         self.right_lower_left_switch_pressed = ((msg.right_lower_left_switch and not self.right_lower_left_switch) or self.right_lower_left_switch_pressed)
+        # 本项目中无实际对应按键
         self.right_lower_right_switch_pressed = ((msg.right_lower_right_switch and not self.right_lower_right_switch) or self.right_lower_right_switch_pressed)
+        # R2键
 
         self.mode = msg.mode
         self.right_stick = msg.right_stick
+        # 右摇杆
         self.left_stick = msg.left_stick
+        # 左摇杆
         self.left_upper_switch = msg.left_upper_switch
+        # L1键
         self.left_lower_left_switch = msg.left_lower_left_switch
+        # L2键
         self.left_lower_right_switch = msg.left_lower_right_switch
+        # 本项目中无实际对应按键
         self.right_upper_switch = msg.right_upper_switch
+        # R1键
         self.right_lower_left_switch = msg.right_lower_left_switch
+        # 本项目中无实际对应按键
         self.right_lower_right_switch = msg.right_lower_right_switch
+        # R2键
 
         # print(self.right_stick, self.left_stick)
 
 # 是否要删除下面的camera相关函数？
 # --------------------------------------------------
-    # def _camera_cb(self, channel, data):
-    #     msg = camera_message_lcmt.decode(data)
+    def _camera_cb(self, channel, data):
+        msg = camera_message_lcmt.decode(data)
 
-    #     img = np.fromstring(msg.data, dtype=np.uint8)
-    #     img = img.reshape((3, 200, 464)).transpose(1, 2, 0)
+        img = np.fromstring(msg.data, dtype=np.uint8)
+        img = img.reshape((3, 200, 464)).transpose(1, 2, 0)
 
-    #     cam_id = int(channel[-1])
-    #     if cam_id == 1:
-    #         self.camera_image_front = img
-    #     elif cam_id == 2:
-    #         self.camera_image_bottom = img
-    #     elif cam_id == 3:
-    #         self.camera_image_left = img
-    #     elif cam_id == 4:
-    #         self.camera_image_right = img
-    #     elif cam_id == 5:
-    #         self.camera_image_rear = img
-    #     else:
-    #         print("Image received from camera with unknown ID#!")
+        cam_id = int(channel[-1])
+        if cam_id == 1:
+            self.camera_image_front = img
+        elif cam_id == 2:
+            self.camera_image_bottom = img
+        elif cam_id == 3:
+            self.camera_image_left = img
+        elif cam_id == 4:
+            self.camera_image_right = img
+        elif cam_id == 5:
+            self.camera_image_rear = img
+        else:
+            print("Image received from camera with unknown ID#!")
 
-    #     #im = Image.fromarray(img).convert('RGB')
+        #im = Image.fromarray(img).convert('RGB')
 
-    #     #im.save("test_image_" + channel + ".jpg")
-    #     #print(channel)
+        #im.save("test_image_" + channel + ".jpg")
+        #print(channel)
             
-    # def _rect_camera_cb(self, channel, data):
-    #     message_types = [camera_message_rect_wide, camera_message_rect_wide, camera_message_rect_wide,
-    #                      camera_message_rect_wide, camera_message_rect_wide]
-    #     image_shapes = [(116, 100, 3), (116, 100, 3), (116, 100, 3), (116, 100, 3), (116, 100, 3)]
+    def _rect_camera_cb(self, channel, data):
+        message_types = [camera_message_rect_wide, camera_message_rect_wide, camera_message_rect_wide,
+                         camera_message_rect_wide, camera_message_rect_wide]
+        image_shapes = [(116, 100, 3), (116, 100, 3), (116, 100, 3), (116, 100, 3), (116, 100, 3)]
 
-    #     cam_name = channel.split("_")[-1]
-    #     # print(f"received py from {cam_name}")
-    #     cam_id = self.camera_names.index(cam_name) + 1
+        cam_name = channel.split("_")[-1]
+        # print(f"received py from {cam_name}")
+        cam_id = self.camera_names.index(cam_name) + 1
 
-    #     msg = message_types[cam_id - 1].decode(data)
+        msg = message_types[cam_id - 1].decode(data)
 
-    #     img = np.fromstring(msg.data, dtype=np.uint8)
-    #     img = np.flip(np.flip(
-    #         img.reshape((image_shapes[cam_id - 1][2], image_shapes[cam_id - 1][1], image_shapes[cam_id - 1][0])),
-    #         axis=0), axis=1).transpose(1, 2, 0)
-    #     # print(img.shape)
-    #     # img = np.flip(np.flip(img.reshape(image_shapes[cam_id - 1]), axis=0), axis=1)[:, :,
-    #     #       [2, 1, 0]]  # .transpose(1, 2, 0)
+        img = np.fromstring(msg.data, dtype=np.uint8)
+        img = np.flip(np.flip(
+            img.reshape((image_shapes[cam_id - 1][2], image_shapes[cam_id - 1][1], image_shapes[cam_id - 1][0])),
+            axis=0), axis=1).transpose(1, 2, 0)
+        # print(img.shape)
+        # img = np.flip(np.flip(img.reshape(image_shapes[cam_id - 1]), axis=0), axis=1)[:, :,
+        #       [2, 1, 0]]  # .transpose(1, 2, 0)
 
-    #     if cam_id == 1:
-    #         self.camera_image_front = img
-    #     elif cam_id == 2:
-    #         self.camera_image_bottom = img
-    #     elif cam_id == 3:
-    #         self.camera_image_left = img
-    #     elif cam_id == 4:
-    #         self.camera_image_right = img
-    #     elif cam_id == 5:
-    #         self.camera_image_rear = img
-    #     else:
-    #         print("Image received from camera with unknown ID#!")
+        if cam_id == 1:
+            self.camera_image_front = img
+        elif cam_id == 2:
+            self.camera_image_bottom = img
+        elif cam_id == 3:
+            self.camera_image_left = img
+        elif cam_id == 4:
+            self.camera_image_right = img
+        elif cam_id == 5:
+            self.camera_image_rear = img
+        else:
+            print("Image received from camera with unknown ID#!")
 # --------------------------------------------------
             
-
     def poll(self, cb=None):    # 阅读完成
         t = time.time()
         # 时间戳t

@@ -1,8 +1,7 @@
 import torch
 
-
 class CommandProfile:
-    def __init__(self, dt, max_time_s=10.):
+    def __init__(self, dt, max_time_s=10.): # 阅读完成 √
         self.dt = dt
         self.max_timestep = int(max_time_s / self.dt)
         self.commands = torch.zeros((self.max_timestep, 9))
@@ -92,17 +91,20 @@ class ElegantGaitProfile(CommandProfile):
         self.commands[:len_command_sequence, 8] = torch.Tensor(command_sequence["duration_cmd"])
 
 class RCControllerProfile(CommandProfile):
-    def __init__(self, dt, state_estimator, x_scale=1.0, y_scale=1.0, yaw_scale=1.0, probe_vel_multiplier=1.0): # 阅读完成
+    def __init__(self, dt, state_estimator, x_scale=1.0, y_scale=1.0, yaw_scale=1.0, probe_vel_multiplier=1.0): # 阅读完成 √
         super().__init__(dt)
         self.state_estimator = state_estimator
         self.x_scale = x_scale
+        # 最大前向速度
         self.y_scale = y_scale
+        # 最大侧向速度
         self.yaw_scale = yaw_scale
+        # 最大偏航速度
         self.probe_vel_multiplier = probe_vel_multiplier
         # 不知道probe_vel_multiplier是什么含义
 
         self.triggered_commands = {i: None for i in range(4)}  # command profiles for each action button on the controller
-        # 遥控器上四个按键X、Y、B、A（顺序不一定对）的命令配置文件
+        # 遥控器上四个按键X、Y、B、A（顺序不一定对）的命令配置(command profiles)
         self.currently_triggered = [0, 0, 0, 0]
         # 当前触发的按键
         self.button_states = [0, 0, 0, 0]

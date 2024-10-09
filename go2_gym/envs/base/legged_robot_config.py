@@ -2,8 +2,8 @@
 
 from params_proto import PrefixProto, ParamsProto
 
-
 class Cfg(PrefixProto, cli=False):
+    # cli=False在这里不是常规的python语法。应该是跟params_proto库有关，可能这个库允许在类的定义中传递额外的参数。
     class env(PrefixProto, cli=False):
         num_envs = 4096
         num_observations = 235

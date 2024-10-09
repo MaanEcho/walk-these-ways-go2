@@ -1,5 +1,4 @@
 def train_go2(headless=True):
-
     import isaacgym
     assert isaacgym
     import torch
@@ -16,6 +15,7 @@ def train_go2(headless=True):
     from go2_gym_learn.ppo_cse.ppo import PPO_Args
     from go2_gym_learn.ppo_cse import RunnerArgs
 
+    #--------------------------------------------------------
     config_go2(Cfg)
 
     Cfg.commands.num_lin_vel_bins = 30
@@ -204,6 +204,7 @@ def train_go2(headless=True):
     Cfg.commands.pacing_offset = False
     Cfg.commands.binary_phases = True
     Cfg.commands.gaitwise_curricula = True
+    #--------------------------------------------------------
 
     env = VelocityTrackingEasyEnv(sim_device='cuda:0', headless=False, cfg=Cfg)
 
@@ -216,15 +217,16 @@ def train_go2(headless=True):
     runner = Runner(env, device=f"cuda:{gpu_id}")
     runner.learn(num_learning_iterations=100000, init_at_random_ep_len=True, eval_freq=100)
 
-
 if __name__ == '__main__':
     from pathlib import Path
     from ml_logger import logger
     from go2_gym import MINI_GYM_ROOT_DIR
 
     stem = Path(__file__).stem
+    # 提取当前文件的文件名（不含扩展名）
     logger.configure(logger.utcnow(f'gait-conditioned-agility/%Y-%m-%d/{stem}/%H%M%S.%f'),
                      root=Path(f"{MINI_GYM_ROOT_DIR}/runs").resolve(), )
+    # 配置日志记录器，指定日志文件的存储位置。日志文件将存储在 MINI_GYM_ROOT_DIR/runs 目录下的一个以当前时间戳命名的子目录中。
     logger.log_text("""
                 charts: 
                 - yKey: train/episode/rew_total/mean
@@ -252,6 +254,7 @@ if __name__ == '__main__':
                 - yKey: adaptation_loss/mean
                   xKey: iterations
                 """, filename=".charts.yml", dedent=True)
+    # 将一个 YAML 格式的字符串写入到 .charts.yml 文件中。这个文件包含了多个图表和视频的配置信息，这些信息可能用于可视化训练过程中的各种指标。
 
     # to see the environment rendering, set headless=False
     train_go2(headless=False)

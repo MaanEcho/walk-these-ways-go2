@@ -9,8 +9,7 @@ from go2_gym_deploy.lcm_types.pd_tau_targets_lcmt import pd_tau_targets_lcmt
 
 lc = lcm.LCM("udpm://239.255.76.67:7667?ttl=255")
 
-
-def class_to_dict(obj) -> dict:  # 阅读完成
+def class_to_dict(obj) -> dict:  # 阅读完成 √
     """
     功能：将一个Python类实例（obj）转换为一个字典（dict）。具体来说，它递归地将类的属性及其嵌套对象转换为字典形式，并忽略以下两个内容：
     ①私有属性：以 _ 开头的属性会被忽略；②特定属性：名为 terrain 的属性会被忽略。
@@ -31,15 +30,16 @@ def class_to_dict(obj) -> dict:  # 阅读完成
         result[key] = element
     return result
 
-
 class LCMAgent():
-    def __init__(self, cfg, se, command_profile):   # 阅读完成
+    def __init__(self, cfg, se, command_profile):   # 阅读完成 但还没完全理解函数内容
         if not isinstance(cfg, dict):
         # 判断变量cfg是否是一个字典（dict）。如果不是字典，则调用class_to_dict()函数将cfg转换为一个字典。
             cfg = class_to_dict(cfg)
         self.cfg = cfg
         self.se = se
+        # self.se 等价于 StateEstimator(lc)
         self.command_profile = command_profile
+        # self.command_profile 等价于 RCControllerProfile(dt=0.02, state_estimator=se, x_scale=2.5, y_scale=0.6, yaw_scale=5.0)
 
         self.dt = self.cfg["control"]["decimation"] * self.cfg["sim"]["dt"]
         # dt还是控制步长的含义吗？
@@ -72,7 +72,6 @@ class LCMAgent():
              self.obs_scales["body_roll_cmd"], self.obs_scales["stance_width_cmd"],
              self.obs_scales["stance_length_cmd"], self.obs_scales["aux_reward_cmd"], 1, 1, 1, 1, 1, 1
              ])[:self.num_commands]
-
 
         joint_names = [
             "FL_hip_joint", "FL_thigh_joint", "FL_calf_joint",  # 左前机身、大腿、小腿关节
@@ -125,9 +124,9 @@ class LCMAgent():
         self.body_angular_vel = np.zeros(3)
         # 机器人角速度
         self.joint_pos_target = np.zeros(12)
-        # 目标关节位置
+        # 关节目标位置
         self.joint_vel_target = np.zeros(12)
-        # 目标关节速度
+        # 关节目标速度
         self.torques = np.zeros(12)
         # 扭矩
         self.contact_state = np.ones(4)
@@ -217,30 +216,41 @@ class LCMAgent():
         """部署时无需特权观测"""
         return None
 
-    def publish_action(self, action, hard_reset=False):
+    # "pd_plustau_targets" channel
+    def publish_action(self, action, hard_reset=False): # 阅读完成
+        """将关节电机指令发送到‘pd_plustau_targets’ channel中"""
 
         command_for_robot = pd_tau_targets_lcmt()
         self.joint_pos_target = \
             (action[0, :12].detach().cpu().numpy() * self.cfg["control"]["action_scale"]).flatten()
         self.joint_pos_target[[0, 3, 6, 9]] *= self.cfg["control"]["hip_scale_reduction"]
         # self.joint_pos_target[[0, 3, 6, 9]] *= -1
-        self.joint_pos_target = self.joint_pos_target
+        self.joint_pos_target = self.joint_pos_target   # ？等号左右两边相同，这是为什么？
         self.joint_pos_target += self.default_dof_pos
         joint_pos_target = self.joint_pos_target[self.joint_idxs]
         self.joint_vel_target = np.zeros(12)
         # print(f'cjp {self.joint_pos_target}')
 
         command_for_robot.q_des = joint_pos_target
+        # 关节目标位置
         command_for_robot.qd_des = self.joint_vel_target
+        # 关节目标速度
         command_for_robot.kp = self.p_gains
+        # 关节电机的kp
         command_for_robot.kd = self.d_gains
+        # 关节电机的kd
         command_for_robot.tau_ff = np.zeros(12)
+        # 关节电机的前馈扭矩
         command_for_robot.se_contactState = np.zeros(4)
+        # 足端接触状态
         command_for_robot.timestamp_us = int(time.time() * 10 ** 6)
+        # 时间戳
         command_for_robot.id = 0
+        # ID（不知道是什么的ID）
 
         if hard_reset:
             command_for_robot.id = -1
+        # 不知道这里hard_reset是什么意思
 
 
         self.torques = (self.joint_pos_target - self.dof_pos) * self.p_gains + (self.joint_vel_target - self.dof_vel) * self.d_gains

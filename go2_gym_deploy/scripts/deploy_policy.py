@@ -20,26 +20,23 @@ def load_and_run_policy(label, experiment_name, max_vel=1.0, max_yaw_vel=1.0):
     # 根据label加载对应的目录，dirs将包含所有匹配的子目录和文件。
     logdir = sorted(dirs)[0]
     # logdir将是dirs中按字母顺序排在最前面的子目录。
-
     with open(logdir+"/parameters.pkl", 'rb') as file:
         pkl_cfg = pkl.load(file)
         # 加载参数文件
         print(pkl_cfg.keys())
         # 打印pkl_cfg的键值
-        cfg = pkl_cfg["Cfg"]
+        cfg = pkl_cfg["Cfg"]    # ********
         # 取出Cfg键值，即配置文件内容。
         print(cfg.keys())
         # 打印cfg的键值
-
     print('Config successfully loaded!')
     # 成功加载配置文件信息。
 
-    #----------------------
-    se = StateEstimator(lc)
-    #----------------------
+    se = StateEstimator(lc) # ********
 
     control_dt = 0.02   # 控制步长
-    command_profile = RCControllerProfile(dt=control_dt, state_estimator=se, x_scale=max_vel, y_scale=0.6, yaw_scale=max_yaw_vel)
+    command_profile = RCControllerProfile(dt=control_dt, state_estimator=se, x_scale=max_vel, y_scale=0.6, yaw_scale=max_yaw_vel)   # ********
+    # x_scale, y_scale, yaw_scale分别是最大前向速度、最大侧向速度、最大偏航角速度。
 
     hardware_agent = LCMAgent(cfg, se, command_profile)
     se.spin()
@@ -90,8 +87,7 @@ def load_policy(logdir):
 
     return policy
 
-
-if __name__ == '__main__':
+if __name__ == '__main__':  # 阅读完成
     # label = "gait-conditioned-agility/pretrain-v0/train"
     label = "gait-conditioned-agility/pretrain-go2/train"
 

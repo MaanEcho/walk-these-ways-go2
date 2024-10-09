@@ -1,3 +1,10 @@
+""
+    "
+    lcm_position_go2.cpp主要负责与 Go2 机器人交互，获取机器人状态信息，并将控制指令发送给机器人。
+        这里不涉及网络模型的加载和推理，这部分由 deploy_policy.py 实现。
+    ""
+    "
+
 // lcm related headfile
 #include <lcm/lcm-cpp.hpp>
 #include "leg_control_data_lcmt.hpp"
@@ -25,9 +32,9 @@
 #define TOPIC_LOWSTATE "rt/lowstate"
 #define TOPIC_JOYSTICK "rt/wirelesscontroller"
 
-// 为保证项目代码的稳定性和易理解，没有采用unitree_sdk2中采用的using namespace语句
+    // 为保证项目代码的稳定性和易理解，没有采用unitree_sdk2中采用的using namespace语句
 
-constexpr double PosStopF = (2.146E+9f);
+    constexpr double PosStopF = (2.146E+9f);
 constexpr double VelStopF = (16000.0f);
 
 // 无需更改：Unitree 提供的电机校验函数
@@ -182,14 +189,14 @@ void Custom::SwitchService(const std::string &serviceName, uint32_t status) // �
     rsc.ServiceSwitch(serviceName, status);
 }
 
-// 读取底层状态
+// 读取底层状态 √
 void Custom::LowStateMessageHandler(const void *message) // 阅读完成
 {
     // 用sdk2读取的底层state
     low_state = *(unitree_go::msg::dds_::LowState_ *)message;
 }
 
-// 保存遥控器消息
+// 保存遥控器消息 √
 void Custom::JoystickHandler(const void *message) // 阅读完成
 {
     // 遥控器信号
@@ -200,7 +207,7 @@ void Custom::JoystickHandler(const void *message) // 阅读完成
 // -------------------------------------------------------------------------------
 // 线程 1 ： lcm send 线程
 // 此线程作用：实时通过unitree_sdk2读取low_state信号和joystick信号，并发送给lcm中间件
-void Custom::lcm_send() // 阅读完成
+void Custom::lcm_send() // 阅读完成 √
 {
     // leg_control_lcm_data
     for (int i = 0; i < 12; i++)
@@ -289,7 +296,7 @@ void Custom::lcm_send() // 阅读完成
 // 此线程作用：实时通过lcm中间件读取pytorch神经网络输出的期望关节控制信号（q, qd, kp, kd, tau_ff）
 // 查看 go2_gym_deploy/envs/lcm_agent.py 文件，可以知道：
 // 神经网络只输出期望的q，而kp，kd是可以自定义设置的, qd 和 tau_ff 被设置为0
-void Custom::lcm_receive_Handler(const lcm::ReceiveBuffer *rbuf, const std::string &chan, const pd_tau_targets_lcmt *msg) // 阅读完成
+void Custom::lcm_receive_Handler(const lcm::ReceiveBuffer *rbuf, const std::string &chan, const pd_tau_targets_lcmt *msg) // 阅读完成 √
 {
     (void)rbuf;                  // 声明为未使用的参数
     (void)chan;                  // 声明为未使用的参数
@@ -297,7 +304,7 @@ void Custom::lcm_receive_Handler(const lcm::ReceiveBuffer *rbuf, const std::stri
 }
 
 // 此处参考lcm推荐的标准格式，循环处理，接受lcm消息
-void Custom::lcm_receive() // 阅读完成
+void Custom::lcm_receive() // 阅读完成 √
 {
     while (true)
     {
@@ -338,7 +345,7 @@ void Custom::InitLowCmd() // 阅读完成 √
 }
 
 // SetNominalPose()函数用于设置趴下时初始的关节角度
-void Custom::SetNominalPose() // 阅读完成
+void Custom::SetNominalPose() // 阅读完成 √
 {
     // 运行此cpp文件后，不仅是初始化通信
     // 同样会在趴下时的初始化关节角度
@@ -369,7 +376,7 @@ void Custom::SetNominalPose() // 阅读完成
 }
 
 // 此函数是发送底层控制指令的回调函数，DDS 会以一定频率触发该回调函数。此回调函数从上到下实现的功能分别是：①在线程第一次执行时，将当前各关节角度设置为目标角度，并初始化 Y、A、B、L2 四个按键的键值；②一大段安全冗余代码，确保 Go2 机器人在安全姿态下执行神经网络模型的输出；③计算 CRC 校验码，并调用 lowcmd_publisher的Write()函数将控制命令发送给 Go2 机器人。
-void Custom::LowCmdWrite() // 阅读完成
+void Custom::LowCmdWrite() // 阅读完成 √
 {
     motiontime++; // 底层控制指令的下发次数
 
@@ -462,14 +469,14 @@ void Custom::LowCmdWrite() // 阅读完成
     /*此段代码中第一行首先计算了 CRC 校验码。
     最后一行代码表示调用 lowcmd_publisher的Write()函数将控制命令发送给 Go2 机器人。*/
     low_cmd.crc() = crc32_core((uint32_t *)&low_cmd, (sizeof(unitree_go::msg::dds_::LowCmd_) >> 2) - 1);
-    lowcmd_publisher->Write(low_cmd);
+    lowcmd_publisher->Write(low_cmd); // **向 Go2 机器人发送底层控制指令**
 }
 
 //
 // 与循环工作的线程相关的函数定义已完结
 //----------------------------------------------------------------------
 
-void Custom::Init() // 阅读完成
+void Custom::Init() // 阅读完成 √
 {
     firstRun = true;
     InitLowCmd();
@@ -493,7 +500,7 @@ void Custom::Init() // 阅读完成
     joystick_suber->InitChannel(std::bind(&Custom::JoystickHandler, this, std::placeholders::_1), 1);
 }
 
-void Custom::Loop() // 阅读完成
+void Custom::Loop() // 阅读完成 √
 {
     // 新增线程可以实现loop function的功能
 
@@ -509,7 +516,7 @@ void Custom::Loop() // 阅读完成
     lowCmdWriteThreadPtr = unitree::common::CreateRecurrentThreadEx("dds_write_thread", UT_CPU_ID_NONE, dt * 1e6, &Custom::LowCmdWrite, this);
 }
 
-int main(int argc, char **argv)
+int main(int argc, char **argv) // 阅读完成 √
 {
     if (argc < 2)
     {
@@ -552,11 +559,13 @@ int main(int argc, char **argv)
 
     custom.Init();
 
+    // 未做修改
     std::cout << "Communication is set up successfully" << std::endl;
     std::cout << "LCM <<<------------>>> Unitree SDK2" << std::endl;
     std::cout << "------------------------------------" << std::endl;
     std::cout << "------------------------------------" << std::endl;
     std::cout << "Press L2+B if any unexpected error occurs" << std::endl;
+    // 未做修改
 
     custom.Loop();
 
@@ -567,4 +576,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-// 后面要逐渐关注lowstate的获取和lowcmd的下发
