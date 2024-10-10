@@ -6,27 +6,27 @@ from matplotlib import pyplot as plt
 def is_met(scale, l2_err, threshold):
     return (l2_err / scale) < threshold
 
-
 def key_is_met(metric_cache, config, ep_len, target_key, env_id, threshold):
     # metric_cache[target_key][env_id] / ep_len
     scale = 1
     l2_err = 0
     return is_met(scale, l2_err, threshold)
 
-
 class Curriculum:
-    def set_to(self, low, high, value=1.0):
+    def set_to(self, low, high, value=1.0):  # 阅读完成
         inds = np.logical_and(
             self.grid >= low[:, None],
             self.grid <= high[:, None]
         ).all(axis=0)
+        # 这行代码的功能是创建一个布尔数组，用于指示 self.grid 中的每一列是否在给定的范围 [low, high] 内。具体来说，它检查 self.grid 的每一列中的每个元素是否同时大于等于 low 数组中的相应元素，并且小于等于 high 数组中的相应元素。最终结果是一个布尔数组，表示哪些列满足所有这些条件。
 
         assert len(inds) != 0, "You are intializing your distribution with an empty domain!"
 
         self.weights[inds] = value
 
-    def __init__(self, seed, **key_ranges):
+    def __init__(self, seed, **key_ranges): # 阅读完成
         self.rng = np.random.RandomState(seed)
+        # 创建一个 numpy 随机数生成器，并将其赋值给 self.rng
 
         self.cfg = cfg = {}
         self.indices = indices = {}
@@ -41,7 +41,7 @@ class Curriculum:
         # self.bin_sizes = {key: arr[1] - arr[0] for key, arr in cfg.items()}
         self.bin_sizes = {key: (v_range[1] - v_range[0]) / v_range[2] for key, v_range in key_ranges.items()}
 
-        self._raw_grid = np.stack(np.meshgrid(*cfg.values(), indexing='ij'))
+        self._raw_grid = np.stack(np.meshgrid(*cfg.values(), indexing='ij'))    # 不理解这两行代码的功能
         self._idx_grid = np.stack(np.meshgrid(*indices.values(), indexing='ij'))
         self.keys = [*key_ranges.keys()]
         self.grid = self._raw_grid.reshape([len(self.keys), -1])
@@ -54,7 +54,7 @@ class Curriculum:
         self.weights = np.zeros(l)
         self.indices = np.arange(l)
 
-    def __len__(self):
+    def __len__(self):  # 阅读完成
         return self._l
 
     def __getitem__(self, *keys):
@@ -88,7 +88,6 @@ class Curriculum:
         cgf_centroid, inds = self.sample_bins(batch_size, low=low, high=high)
         return np.stack([self.sample_uniform_from_cell(v_range) for v_range in cgf_centroid]), inds
 
-
 class SumCurriculum(Curriculum):
     def __init__(self, seed, **kwargs):
         super().__init__(seed, **kwargs)
@@ -109,9 +108,8 @@ class SumCurriculum(Curriculum):
             return s_rate.mean(axis=marginals)
         return s_rate
 
-
 class RewardThresholdCurriculum(Curriculum):
-    def __init__(self, seed, **kwargs):
+    def __init__(self, seed, **kwargs): # 阅读完成
         super().__init__(seed, **kwargs)
 
         self.episode_reward_lin = np.zeros(len(self))

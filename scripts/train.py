@@ -15,7 +15,7 @@ def train_go2(headless=True):
     from go2_gym_learn.ppo_cse.ppo import PPO_Args
     from go2_gym_learn.ppo_cse import RunnerArgs
 
-    #--------------------------------------------------------
+    #----------------------------------------------------------------------0
     config_go2(Cfg)
 
     Cfg.commands.num_lin_vel_bins = 30
@@ -32,9 +32,11 @@ def train_go2(headless=True):
     Cfg.control.control_type = "actuator_net"
 
     Cfg.domain_rand.randomize_rigids_after_start = False
-    Cfg.env.priv_observe_motion = False
-    Cfg.env.priv_observe_gravity_transformed_motion = False
-    Cfg.domain_rand.randomize_friction_indep = False
+    # ---------------新加属性---------------0
+    Cfg.env.priv_observe_motion = False # 是否特权观测运动？（不确定理解是否正确）
+    Cfg.env.priv_observe_gravity_transformed_motion = False # 是否特权观测重力加速度？（感觉理解不太对）
+    Cfg.domain_rand.randomize_friction_indep = False    # 是否随机化独立摩擦系数？（感觉理解不太对）
+    # ---------------新加属性---------------1
     Cfg.env.priv_observe_friction_indep = False
     Cfg.domain_rand.randomize_friction = True
     Cfg.env.priv_observe_friction = True
@@ -53,15 +55,21 @@ def train_go2(headless=True):
     Cfg.domain_rand.randomize_com_displacement = False
     Cfg.domain_rand.com_displacement_range = [-0.15, 0.15]
     Cfg.env.priv_observe_com_displacement = False
-    Cfg.domain_rand.randomize_ground_friction = True
+    # ---------------新加属性---------------0
+    Cfg.domain_rand.randomize_ground_friction = True    # 是否随机化地面摩擦力
+    # ---------------新加属性---------------1
     Cfg.env.priv_observe_ground_friction = False
     Cfg.env.priv_observe_ground_friction_per_foot = False
-    Cfg.domain_rand.ground_friction_range = [0.0, 0.0]
+    # ---------------新加属性---------------0
+    Cfg.domain_rand.ground_friction_range = [0.0, 0.0]  # 地面摩擦力范围
+    # ---------------新加属性---------------1
     Cfg.domain_rand.randomize_motor_strength = True
     Cfg.domain_rand.motor_strength_range = [0.9, 1.1]
     Cfg.env.priv_observe_motor_strength = False
-    Cfg.domain_rand.randomize_motor_offset = True
-    Cfg.domain_rand.motor_offset_range = [-0.02, 0.02]
+    # ---------------新加属性---------------0
+    Cfg.domain_rand.randomize_motor_offset = True   # 是否随机化电机偏移量
+    Cfg.domain_rand.motor_offset_range = [-0.02, 0.02]  # 电机偏移量范围
+    # ---------------新加属性---------------1
     Cfg.env.priv_observe_motor_offset = False
     Cfg.domain_rand.push_robots = False
     Cfg.domain_rand.randomize_Kp_factor = False
@@ -72,8 +80,10 @@ def train_go2(headless=True):
     Cfg.env.priv_observe_body_height = False
     Cfg.env.priv_observe_desired_contact_states = False
     Cfg.env.priv_observe_contact_forces = False
-    Cfg.env.priv_observe_foot_displacement = False
-    Cfg.env.priv_observe_gravity_transformed_foot_displacement = False
+    # ---------------新加属性---------------0
+    Cfg.env.priv_observe_foot_displacement = False  # 是否特权观测足端位移
+    Cfg.env.priv_observe_gravity_transformed_foot_displacement = False  # 是否特权观测和重力加速度相关的足端位移？（不确定理解是否正确）
+    # ---------------新加属性---------------1
 
     Cfg.env.num_privileged_obs = 2
     Cfg.env.num_observation_history = 30
@@ -89,10 +99,12 @@ def train_go2(headless=True):
     Cfg.env.observe_timing_parameter = False
     Cfg.env.observe_clock_inputs = True
 
-    Cfg.domain_rand.tile_height_range = [-0.0, 0.0]
-    Cfg.domain_rand.tile_height_curriculum = False
-    Cfg.domain_rand.tile_height_update_interval = 1000000
-    Cfg.domain_rand.tile_height_curriculum_step = 0.01
+    # ---------------新加属性---------------0
+    Cfg.domain_rand.tile_height_range = [-0.0, 0.0] # tile高度范围？（不理解具体含义）
+    Cfg.domain_rand.tile_height_curriculum = False  # 是否使用tile高度课程？（不理解具体含义）
+    Cfg.domain_rand.tile_height_update_interval = 1000000   # tile高度更新间隔？（不理解具体含义）
+    Cfg.domain_rand.tile_height_curriculum_step = 0.01  # tile高度课程步长？（不理解具体含义）
+    # ---------------新加属性---------------1
     Cfg.terrain.border_size = 0.0
     # Default value = "trimesh"
     Cfg.terrain.mesh_type = "trimesh"  # "heightfield" # none, plane, heightfield or trimesh
@@ -123,20 +135,28 @@ def train_go2(headless=True):
     Cfg.reward_scales.jump = 10.0
     Cfg.reward_scales.base_height = 0.0
     Cfg.rewards.base_height_target = 0.30
-    Cfg.reward_scales.estimation_bonus = 0.0
+    # ---------------新加属性---------------0
+    Cfg.reward_scales.estimation_bonus = 0.0    # 估计奖励权重？（不理解具体含义）
+    # ---------------新加属性---------------1
     Cfg.reward_scales.raibert_heuristic = -10.0
     Cfg.reward_scales.feet_impact_vel = -0.0
-    Cfg.reward_scales.feet_clearance = -0.0
-    Cfg.reward_scales.feet_clearance_cmd = -0.0
+    # ---------------新加属性---------------0
+    Cfg.reward_scales.feet_clearance = -0.0 # 足端间距奖励权重？（不理解具体含义）
+    Cfg.reward_scales.feet_clearance_cmd = -0.0 # 足端间距命令奖励权重？（不理解具体含义）
+    # ---------------新加属性---------------1
     Cfg.reward_scales.feet_clearance_cmd_linear = -30.0
     Cfg.reward_scales.orientation = 0.0
-    Cfg.reward_scales.orientation_control = -5.0
-    Cfg.reward_scales.tracking_stance_width = -0.0
-    Cfg.reward_scales.tracking_stance_length = -0.0
+    # ---------------新加属性---------------0
+    Cfg.reward_scales.orientation_control = -5.0    # 姿态控制奖励权重？（不理解具体含义）
+    Cfg.reward_scales.tracking_stance_width = -0.0  # 跟踪姿态宽度奖励权重？（不理解具体含义）
+    Cfg.reward_scales.tracking_stance_length = -0.0  # 跟踪姿态长度奖励权重？（不理解具体含义）
+    # ---------------新加属性---------------1
     Cfg.reward_scales.lin_vel_z = -0.02
     Cfg.reward_scales.ang_vel_xy = -0.001
     Cfg.reward_scales.feet_air_time = 0.0
-    Cfg.reward_scales.hop_symmetry = 0.0
+    # ---------------新加属性---------------0
+    Cfg.reward_scales.hop_symmetry = 0.0    # 跳跃对称奖励？（不理解具体含义）
+    # ---------------新加属性---------------1
     Cfg.rewards.kappa_gait_probs = 0.07
     Cfg.rewards.gait_force_sigma = 100.
     Cfg.rewards.gait_vel_sigma = 10.
@@ -148,8 +168,6 @@ def train_go2(headless=True):
     Cfg.rewards.only_positive_rewards = False
     Cfg.rewards.only_positive_rewards_ji22_style = True
     Cfg.rewards.sigma_rew_neg = 0.02
-
-
 
     Cfg.commands.lin_vel_x = [-1.0, 1.0]
     Cfg.commands.lin_vel_y = [-0.6, 0.6]
@@ -204,11 +222,12 @@ def train_go2(headless=True):
     Cfg.commands.pacing_offset = False
     Cfg.commands.binary_phases = True
     Cfg.commands.gaitwise_curricula = True
-    #--------------------------------------------------------
+    #----------------------------------------------------------------------1
 
     env = VelocityTrackingEasyEnv(sim_device='cuda:0', headless=False, cfg=Cfg)
 
     # log the experiment parameters
+    # 记录实验参数
     logger.log_params(AC_Args=vars(AC_Args), PPO_Args=vars(PPO_Args), RunnerArgs=vars(RunnerArgs),
                       Cfg=vars(Cfg))
 

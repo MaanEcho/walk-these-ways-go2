@@ -40,23 +40,31 @@ class DataCaches:
 caches = DataCaches(1)
 
 
-class RunnerArgs(PrefixProto, cli=False):
+class RunnerArgs(PrefixProto, cli=False):   # 阅读完成
     # runner
-    algorithm_class_name = 'RMA'
-    num_steps_per_env = 24  # per iteration
-    max_iterations = 1500  # number of policy updates
+    algorithm_class_name = 'RMA'    # 算法类名
+    num_steps_per_env = 24  # 每个环境的步数
+    # per iteration
+    max_iterations = 1500   # 最大迭代次数
+    # number of policy updates
 
     # logging
-    save_interval = 400  # check for potential saves every this many iterations
-    save_video_interval = 100
-    log_freq = 10
+    save_interval = 400 # 保存间隔
+    # check for potential saves every this many iterations
+    # 每隔save_interval个iteration检查一次是否有保存点
+    save_video_interval = 100  # 保存视频间隔
+    log_freq = 10   # 日志频率
 
     # load and resume
-    resume = False
-    load_run = -1  # -1 = last run
-    checkpoint = -1  # -1 = last saved model
-    resume_path = None  # updated from load_run and chkpt
-    resume_curriculum = True
+    resume = False  # 是否从保存点恢复
+    load_run = -1   # 加载哪个run
+    # -1 = last run
+    checkpoint = -1 # 从哪个checkpoint开始恢复
+    # -1 = last saved model
+    resume_path = None  # 从哪个路径恢复
+    # updated from load_run and chkpt
+    # 从load_run的checkpoint恢复
+    resume_curriculum = True    # 是否恢复curriculum状态
 
 
 class Runner:

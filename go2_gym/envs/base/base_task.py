@@ -1,5 +1,4 @@
 # License: see [LICENSE, LICENSES/legged_gym/LICENSE]
-
 import sys
 
 import gym
@@ -12,8 +11,7 @@ import numpy as np
 
 # Base class for RL tasks
 class BaseTask(gym.Env):
-
-    def __init__(self, cfg, sim_params, physics_engine, sim_device, headless, eval_cfg=None):
+    def __init__(self, cfg, sim_params, physics_engine, sim_device, headless, eval_cfg=None):   # 阅读完成
         self.gym = gymapi.acquire_gym()
 
         if isinstance(physics_engine, str) and physics_engine == "SIM_PHYSX":
@@ -35,6 +33,7 @@ class BaseTask(gym.Env):
         self.graphics_device_id = self.sim_device_id
         if self.headless == True:
             self.graphics_device_id = self.sim_device_id
+        # 这个地方代码写得可能有问题
 
         self.num_obs = cfg.env.num_observations
         self.num_privileged_obs = cfg.env.num_privileged_obs
@@ -50,14 +49,15 @@ class BaseTask(gym.Env):
             self.num_envs = cfg.env.num_envs
 
         # optimization flags for pytorch JIT
+        # 设置 PyTorch 的 Just-In-Time (JIT) 编译器的一些优化标志
         torch._C._jit_set_profiling_mode(False)
         torch._C._jit_set_profiling_executor(False)
 
         # allocate buffers
         self.obs_buf = torch.zeros(self.num_envs, self.num_obs, device=self.device, dtype=torch.float)
-        self.rew_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
-        self.rew_buf_pos = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
-        self.rew_buf_neg = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)
+        self.rew_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)    # rew: reward
+        self.rew_buf_pos = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)    # pos: positive
+        self.rew_buf_neg = torch.zeros(self.num_envs, device=self.device, dtype=torch.float)    # neg: negative
         self.reset_buf = torch.ones(self.num_envs, device=self.device, dtype=torch.long)
         self.episode_length_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.long)
         self.time_out_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
@@ -69,7 +69,8 @@ class BaseTask(gym.Env):
 
         # create envs, sim and viewer
         self.create_sim()
-        self.gym.prepare_sim(self.sim)
+        self.gym.prepare_sim(self.sim)  # Prepares simulation with buffer allocations
+        # 这个地方代码写得可能有问题
 
         # todo: read from config
         self.enable_viewer_sync = True
@@ -80,10 +81,13 @@ class BaseTask(gym.Env):
             # subscribe to keyboard shortcuts
             self.viewer = self.gym.create_viewer(
                 self.sim, gymapi.CameraProperties())
+            # 创建一个模拟的查看器。
             self.gym.subscribe_viewer_keyboard_event(
                 self.viewer, gymapi.KEY_ESCAPE, "QUIT")
+            # ESC：退出程序
             self.gym.subscribe_viewer_keyboard_event(
                 self.viewer, gymapi.KEY_V, "toggle_viewer_sync")
+            # V：切换同步视角
 
     def get_observations(self):
         return self.obs_buf

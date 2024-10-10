@@ -31,6 +31,18 @@ class LeggedRobot(BaseTask):
             device_id (int): 0, 1, ...
             headless (bool): Run without rendering if True
         """
+        """ 解析提供的配置文件
+            调用create_sim()函数（创建模拟、地形和环境）
+            初始化用于训练的pytorch缓冲区
+        
+        Args：
+            cfg (Dict): 环境配置文件
+            sim_params (gymapi.SimParams): 仿真参数
+            physics_engine (gymapi.SimType): gymapi.SIM_PHYSX（必须为PhysX）
+            device_type (string): 'cuda'或'cpu'
+            device_id (int): 0、1、...
+            headless (bool): 如果为True，则不渲染可视化界面
+        """
         self.cfg = cfg
         self.eval_cfg = eval_cfg
         self.sim_params = sim_params
@@ -38,6 +50,7 @@ class LeggedRobot(BaseTask):
         self.debug_viz = False
         self.init_done = False
         self.initial_dynamics_dict = initial_dynamics_dict
+        # 选择解析测试参数还是训练参数
         if eval_cfg is not None: self._parse_cfg(eval_cfg)
         self._parse_cfg(self.cfg)
 
@@ -514,13 +527,14 @@ class LeggedRobot(BaseTask):
 
         self._create_envs()
 
-
-    def set_camera(self, position, lookat):
+    def set_camera(self, position, lookat): # 阅读完成
         """ Set camera position and direction
+        """
+        """ 设置相机位置和方向
         """
         cam_pos = gymapi.Vec3(position[0], position[1], position[2])
         cam_target = gymapi.Vec3(lookat[0], lookat[1], lookat[2])
-        self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target) \
+        self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)  # Positions the viewer camera to look at a specified target location
 
     def set_main_agent_pose(self, loc, quat):
         self.root_states[0, 0:3] = torch.Tensor(loc)
@@ -1123,18 +1137,32 @@ class LeggedRobot(BaseTask):
     def _init_buffers(self):
         """ Initialize torch tensors which will contain simulation states and processed quantities
         """
+        """ 初始化torch张量，用于保存模拟状态和处理后的量
+        """
         # get gym GPU state tensors
+        # 获取gym GPU状态张量
         actor_root_state = self.gym.acquire_actor_root_state_tensor(self.sim)
+        # 获取演员根状态的缓冲区。缓冲区的形状为 (num_actors, 13)。每个演员根的状态包含位置 ([0:3])、姿态 ([3:7])、线速度 ([7:10]) 和角速度 ([10:13])。
         dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
+        # 获取自由度状态缓冲区。缓冲区的形状为 (num_dofs, 2)。每个自由度状态包含位置和速度。
         net_contact_forces = self.gym.acquire_net_contact_force_tensor(self.sim)
+        # 获取净接触力缓冲区。缓冲区的形状为 (num_rigid_bodies, 3)。每个接触力状态包含 X、Y、Z 轴上的一个值。
         rigid_body_state = self.gym.acquire_rigid_body_state_tensor(self.sim)
+        # 获取刚体状态的缓冲区。缓冲区的形状为 (num_rigid_bodies, 13)。每个刚体的状态包含位置 ([0:3])、姿态 ([3:7])、线速度 ([7:10]) 和角速度 ([10:13])。
         self.gym.refresh_dof_state_tensor(self.sim)
+        # 更新自由度状态缓冲区。
         self.gym.refresh_actor_root_state_tensor(self.sim)
+        # 更新演员根状态缓冲区。
         self.gym.refresh_net_contact_force_tensor(self.sim)
+        # 更新净接触力缓冲区。
         self.gym.refresh_rigid_body_state_tensor(self.sim)
+        # 更新刚体状态缓冲区。
         self.gym.render_all_camera_sensors(self.sim)
+        # 渲染所有从相机传感器得到的图像。
 
         # create some wrapper tensors for different slices
+        # 创建一些包装张量，用于不同切片
+        # 由于acquire_actor_root_state_tensor()返回的是一个通用的张量描述符，它本身并不是非常有用，为了访问张量的内容，可以使用gymtorch.wrap_tensor()函数将其包装成一个Pytorch张量对象。
         self.root_states = gymtorch.wrap_tensor(actor_root_state)
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
         self.net_contact_forces = gymtorch.wrap_tensor(net_contact_forces)[:self.num_envs * self.num_bodies, :]
@@ -1296,16 +1324,17 @@ class LeggedRobot(BaseTask):
         self.halftime_clock_inputs = torch.zeros(self.num_envs, 4, dtype=torch.float, device=self.device,
                                                  requires_grad=False)
 
-    def _init_command_distribution(self, env_ids):
+    def _init_command_distribution(self, env_ids):  # 已开始阅读
         # new style curriculum
-        self.category_names = ['nominal']
+        # 新风格的课程设置
+        self.category_names = ['nominal']   # 类别名称
         if self.cfg.commands.gaitwise_curricula:
-            self.category_names = ['pronk', 'trot', 'pace', 'bound']
+            self.category_names = ['pronk', 'trot', 'pace', 'bound']    # 四种步态名称：pronk、trot、pace、bound
 
         if self.cfg.commands.curriculum_type == "RewardThresholdCurriculum":
             from .curriculum import RewardThresholdCurriculum
             CurriculumClass = RewardThresholdCurriculum
-        self.curricula = []
+        self.curricula = [] # 课程（curriculum的复数）
         for category in self.category_names:
             self.curricula += [CurriculumClass(seed=self.cfg.commands.curriculum_seed,
                                                x_vel=(self.cfg.commands.limit_vel_x[0],

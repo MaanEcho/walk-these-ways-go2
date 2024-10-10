@@ -10,24 +10,27 @@ from go2_gym_learn.ppo_cse import RolloutStorage
 from go2_gym_learn.ppo_cse import caches
 
 
-class PPO_Args(PrefixProto):
+class PPO_Args(PrefixProto):    # 阅读完成
     # algorithm
-    value_loss_coef = 1.0
-    use_clipped_value_loss = True
-    clip_param = 0.2
-    entropy_coef = 0.01
-    num_learning_epochs = 5
-    num_mini_batches = 4  # mini batch size = num_envs*nsteps / nminibatches
-    learning_rate = 1.e-3  # 5.e-4
-    adaptation_module_learning_rate = 1.e-3
-    num_adaptation_module_substeps = 1
-    schedule = 'adaptive'  # could be adaptive, fixed
-    gamma = 0.99
-    lam = 0.95
-    desired_kl = 0.01
-    max_grad_norm = 1.
+    value_loss_coef = 1.0   # 价值损失系数
+    use_clipped_value_loss = True   # 是否使用截断的价值损失
+    clip_param = 0.2    # PPO算法中的clip参数，用于限制新旧策略的比例，以保持更新的稳定性
+    entropy_coef = 0.01 # 熵正则化系数
+    num_learning_epochs = 5 # 训练过程中的迭代次数，即在每个mini-batch中更新参数的次数
+    num_mini_batches = 4
+    # mini batch size = num_envs*nsteps / nminibatches
+    learning_rate = 1.e-3   # 学习率
+    # 5.e-4
+    adaptation_module_learning_rate = 1.e-3 # 自适应模块学习率
+    num_adaptation_module_substeps = 1  # 自适应模块更新次数？（不确定理解是否正确）
+    schedule = 'adaptive'   # 表示学习率的更新策略
+    # could be adaptive, fixed
+    gamma = 0.99    # 折扣因子
+    lam = 0.95  # GAE-Lambda，用于计算优势估计的通用优势估算器（GAE）
+    desired_kl = 0.01   # 目标KL散度，用于衡量新旧策略分布差异的目标值
+    max_grad_norm = 1.  # 最大梯度范数，用于梯度裁剪，防止梯度爆炸
 
-    selective_adaptation_module_loss = False
+    selective_adaptation_module_loss = False    # 是否使用自适应模块的损失函数
 
 
 class PPO:

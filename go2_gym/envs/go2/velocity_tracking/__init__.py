@@ -15,7 +15,10 @@ class VelocityTrackingEasyEnv(LeggedRobot):
             cfg.env.num_envs = num_envs
 
         sim_params = gymapi.SimParams()
+        # class isaacgym.gymapi.SimParams: Gym Simulation Parameters
         gymutil.parse_sim_config(vars(cfg.sim), sim_params)
+        # vars(cfg.sim) 会返回 cfg.sim 对象的所有属性和它们的值组成的字典。这个字典随后被传递给 gymutil.parse_sim_config 函数。
+        # 函数parse_sim_config会将“字典”cfg.sim中的某些键值对赋值给sim_params中的相应属性。
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless, eval_cfg, initial_dynamics_dict)
 
 

@@ -4,17 +4,17 @@ from params_proto import PrefixProto
 from torch.distributions import Normal
 
 
-class AC_Args(PrefixProto, cli=False):
+class AC_Args(PrefixProto, cli=False):  # 阅读完成
     # policy
-    init_noise_std = 1.0
-    actor_hidden_dims = [512, 256, 128]
-    critic_hidden_dims = [512, 256, 128]
-    activation = 'elu'  # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
+    init_noise_std = 1.0    # 初始噪声标准差
+    actor_hidden_dims = [512, 256, 128] # actor网络隐藏层维度
+    critic_hidden_dims = [512, 256, 128]    # critic网络隐藏层维度
+    activation = 'elu'  # 激活函数
+    # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
 
-    adaptation_module_branch_hidden_dims = [256, 128]
+    adaptation_module_branch_hidden_dims = [256, 128]   # adaptation module分支隐藏层维度
 
-    use_decoder = False
-
+    use_decoder = False  # 是否使用decoder
 
 class ActorCritic(nn.Module):
     is_recurrent = False
